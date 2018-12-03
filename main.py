@@ -19,40 +19,23 @@ sys.path.append('%s/pytorch_structure2vec-master/s2v_lib' % os.path.dirname(os.p
 from embedding import EmbedMeanField, EmbedLoopyBP
 
 from util import cmd_args, load_data
+args=cmd_args
 
 class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
-        if cmd_args.gm == 'mean_field':
-            model = EmbedMeanField
-        elif cmd_args.gm == 'loopy_bp':
-            model = EmbedLoopyBP
-        elif cmd_args.gm == 'DGCNN':
-            model = DGCNN
-        else:
-            print('unknown gm %s' % cmd_args.gm)
-            sys.exit()
-
-        if cmd_args.gm == 'DGCNN':
-            self.s2v = model(latent_dim=cmd_args.latent_dim,
-                            output_dim=cmd_args.out_dim,
-                            num_node_feats=cmd_args.feat_dim+cmd_args.attr_dim,
-                            num_edge_feats=0,
-                            k=cmd_args.sortpooling_k)
-        else:
-            self.s2v = model(latent_dim=cmd_args.latent_dim,
-                            output_dim=cmd_args.out_dim,
-                            num_node_feats=cmd_args.feat_dim,
-                            num_edge_feats=0,
-                            max_lv=cmd_args.max_lv)
-        out_dim = cmd_args.out_dim
-        if out_dim == 0:
-            if cmd_args.gm == 'DGCNN':
-                out_dim = self.s2v.dense_dim
-            else:
-                out_dim = cmd_args.latent_dim
-        self.mlp = MLPClassifier(input_size=out_dim, hidden_size=cmd_args.hidden, num_class=cmd_args.num_class, with_dropout=cmd_args.dropout)
-
+        
+        self.margin=args.margin
+        self.num_layers=args.num_layers
+        self.agcns=nn.ModuleList()
+        self.agcns.append(AGCNBlock(args,args.input_dim,args.hidden_size,args.gcn_layers,args.dropout))
+        for _ in range(args.num_layers-1):
+            pass_dim=self.agcns[-1].pass_dim
+            self.agcns.append(AGCNBlock(args,pass_dim,args.hidden_dim,args.gcn_layers,args.dropout))
+        self.mlps=nn.ModuleList()
+        for _ in range(args.num_layers):
+            self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
+        
     def PrepareFeatureLabel(self, batch_graph):
         labels = torch.LongTensor(len(batch_graph))
         n_nodes = 0
@@ -80,7 +63,7 @@ class Classifier(nn.Module):
 
         if node_tag_flag == True:
             concat_tag = torch.LongTensor(concat_tag).view(-1, 1)
-            node_tag = torch.zeros(n_nodes, cmd_args.feat_dim)
+            node_tag = torch.zeros(n_nodes, args.feat_dim)
             node_tag.scatter_(1, concat_tag, 1)
 
         if node_feat_flag == True:
@@ -96,17 +79,40 @@ class Classifier(nn.Module):
         else:
             node_feat = torch.ones(n_nodes, 1)  # use all-one vector as node features
 
-        if cmd_args.mode == 'gpu':
+        if args.mode == 'gpu':
             node_feat = node_feat.cuda()
             labels = labels.cuda()
 
         return node_feat, labels
 
     def forward(self, batch_graph):
-        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
-        embed = self.s2v(batch_graph, node_feat, None)
+#        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
+        '''
+        node_feat: FloatTensor, [batch,node_num,input_dim]
+        labels: LongTensor, [batch] 
+        adj: FloatTensor, [batch,node_num,node_num]
+        mask: FloatTensor, [batch,node_num]
+        '''
+        node_feat, labels, adj,mask = self.PrepareFeatureLabel(batch_graph)
+        
+        cls_loss=0
+        rank_loss=0
+        X=node_feat
+        p_t=[]
+        for i in range(self.num_layers):
+            embed,X,adj,mask=self.agcns[i](X,adj,mask)
+            logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
+            cls_loss=cls_loss+loss
+            #?
+            p_mask=torch.ByteTensor(1).new_zeros(softmax_logits.shape)
+            for i,cls in enumerate(labels):
+                p_mask[i][cls]=1
+            p_t.append(torch.masked_select(softmax_logits,p_mask))
+            if i>0:
+                tmp=p_t[i]-p_t[i-1]+self.margin
+                rank_loss=rank_loss+torch.max(tmp,torch.zeros_like(tmp)).mean()
 
-        return self.mlp(embed, labels)
+        return logits,cls_loss+rank_loss,acc
 
     def output_features(self, batch_graph):
         node_feat, labels = self.PrepareFeatureLabel(batch_graph)
@@ -114,7 +120,7 @@ class Classifier(nn.Module):
         return embed, labels
         
 
-def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=cmd_args.batch_size):
+def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=args.batch_size):
     total_loss = []
     total_iters = (len(sample_idxes) + (bsize - 1) * (optimizer is None)) // bsize
     pbar = tqdm(range(total_iters), unit='batch')
@@ -159,50 +165,50 @@ def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=cmd_arg
 
 
 if __name__ == '__main__':
-    print(cmd_args)
-    random.seed(cmd_args.seed)
-    np.random.seed(cmd_args.seed)
-    torch.manual_seed(cmd_args.seed)
+    print(args)
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     train_graphs, test_graphs = load_data()
     print('# train: %d, # test: %d' % (len(train_graphs), len(test_graphs)))
 
-    if cmd_args.sortpooling_k <= 1:
+    if args.sortpooling_k <= 1:
         num_nodes_list = sorted([g.num_nodes for g in train_graphs + test_graphs])
-        cmd_args.sortpooling_k = num_nodes_list[int(math.ceil(cmd_args.sortpooling_k * len(num_nodes_list))) - 1]
-        cmd_args.sortpooling_k = max(10, cmd_args.sortpooling_k)
-        print('k used in SortPooling is: ' + str(cmd_args.sortpooling_k))
+        args.sortpooling_k = num_nodes_list[int(math.ceil(args.sortpooling_k * len(num_nodes_list))) - 1]
+        args.sortpooling_k = max(10, args.sortpooling_k)
+        print('k used in SortPooling is: ' + str(args.sortpooling_k))
 
     classifier = Classifier()
-    if cmd_args.mode == 'gpu':
+    if args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.Adam(classifier.parameters(), lr=cmd_args.learning_rate)
+    optimizer = optim.Adam(classifier.parameters(), lr=args.learning_rate)
 
     train_idxes = list(range(len(train_graphs)))
     best_loss = None
-    for epoch in range(cmd_args.num_epochs):
+    for epoch in range(args.num_epochs):
         random.shuffle(train_idxes)
         classifier.train()
         avg_loss = loop_dataset(train_graphs, classifier, train_idxes, optimizer=optimizer)
-        if not cmd_args.printAUC:
+        if not args.printAUC:
             avg_loss[2] = 0.0
         print('\033[92maverage training of epoch %d: loss %.5f acc %.5f auc %.5f\033[0m' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2]))
 
         classifier.eval()
         test_loss = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))))
-        if not cmd_args.printAUC:
+        if not args.printAUC:
             test_loss[2] = 0.0
         print('\033[93maverage test of epoch %d: loss %.5f acc %.5f auc %.5f\033[0m' % (epoch, test_loss[0], test_loss[1], test_loss[2]))
 
     with open('acc_results.txt', 'a+') as f:
         f.write(str(test_loss[1]) + '\n')
 
-    if cmd_args.printAUC:
+    if args.printAUC:
         with open('auc_results.txt', 'a+') as f:
             f.write(str(test_loss[2]) + '\n')
 
-    if cmd_args.extract_features:
+    if args.extract_features:
         features, labels = classifier.output_features(train_graphs)
         labels = labels.type('torch.FloatTensor')
         np.savetxt('extracted_features_train.txt', torch.cat([labels.unsqueeze(1), features.cpu()], dim=1).detach().numpy(), '%.4f')

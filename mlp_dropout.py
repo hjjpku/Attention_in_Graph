@@ -21,6 +21,7 @@ class MLPRegression(nn.Module):
         super(MLPRegression, self).__init__()
 
         self.h1_weights = nn.Linear(input_size, hidden_size)
+
         self.h2_weights = nn.Linear(hidden_size, 1)
 
         weights_init(self)
@@ -40,33 +41,46 @@ class MLPRegression(nn.Module):
             return pred
 
 class MLPClassifier(nn.Module):
-    def __init__(self, input_size, hidden_size, num_class, with_dropout=False):
+    def __init__(self, input_size, hidden_size, num_class, num_layers=2,dropout=0.):
         super(MLPClassifier, self).__init__()
 
-        self.h1_weights = nn.Linear(input_size, hidden_size)
-        self.h2_weights = nn.Linear(hidden_size, num_class)
-        self.with_dropout = with_dropout
+        self.num_layers=num_layers
+        if self.num_layers==2:
+            self.h1_weights = nn.Linear(input_size, hidden_size)
+            self.h2_weights = nn.Linear(hidden_size, num_class)
+            torch.nn.init.xavier_normal_(self.h1_weights.weight)
+            torch.nn.init.constant_(self.h1_weights.bias,0)
+            torch.nn.init.xavier_normal_(self.h2_weights.weight)
+            torch.nn.init.constant_(self.h2_weights.bias,0)
+        elif self.num_layers==1;
+            self.h1_weights = nn.Linear(input_size,num_class) 
+            torch.nn.init.xavier_normal_(self.h1_weights.weight)
+            torch.nn.init.constant_(self.h1_weights.bias,0)
+        self.dropout=dropout
+        if self.dropout>0.001:
+            self.dropout_layer=nn.Dropout(p=dropout)
 
-        weights_init(self)
 
     def forward(self, x, y = None):
-        h1 = self.h1_weights(x)
-        h1 = F.relu(h1)
-        if self.with_dropout:
-            h1 = F.dropout(h1, training=self.training)
+        if self.num_layers==2:
+            h1 = self.h1_weights(x)
+            h1 = F.relu(h1)
+            if self.dropout>0.001:
+                h1=self.dropout_layer(h1)
 
-        logits = self.h2_weights(h1)
+            logits = self.h2_weights(h1)
+        elif self.num_layers==1:
+            logits=self.h1_weights(x)
+        
+        softmax_logits = F.softmax(logits,dim=1)
         logits = F.log_softmax(logits, dim=1)
-        #print(type(logits))
-        #print(logits)
 
         if y is not None:
-            y = Variable(y)
             loss = F.nll_loss(logits, y)
 
             pred = logits.data.max(1, keepdim=True)[1]
             acc = pred.eq(y.data.view_as(pred)).cpu().sum() / float(y.size()[0])
             #acc = pred.eq(y.data.view_as(pred)).cpu().sum().item() / float(y.size()[0])
-            return logits, loss, acc
+            return logits,softmax_logits, loss, acc
         else:
             return logits

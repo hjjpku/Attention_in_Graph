@@ -30,6 +30,28 @@ cmd_opt.add_argument('-dropout', type=bool, default=False, help='whether add dro
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
 cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whether to extract final graph features')
 
+
+#classifier options:
+cls_opt=cmd_opt.add_argument_group('classifier options')
+cls_opt.add_argument('-input_dim', type=int, default=1, help='input dimension of node features')
+cls_opt.add_argument('-hidden_dim', type=int, default=64, help='hidden size k')
+cls_opt.add_argument('-num_class', type=int, default=1000, help='classification number')
+cls_opt.add_argument('-num_layers', type=int, default=3, help='layer number of agcn block')
+cls_opt.add_argument('-mlp_hidden', type=int, default=100, help='hidden size of mlp layers')
+cls_opt.add_argument('-mlp_layers', type=int, default=2, help='layer numer of mlp layers')
+cls_opt.add_argument('-eps', type=int, default=1e-10, help='')
+
+#gcn options:
+gcn_opt=cmd_opt.add_argument_group('gcn options')
+gcn_opt.add_argument('-gcn_add_self', type=int, default=1, help='whether to use residual structure in gcn layers')
+gcn_opt.add_argument('-gcn_norm', type=int, default=1, help='whether to normalize gcn layers')
+gcn_opt.add_argument('-gcn_layers', type=int, default=2, help='layer number in each agcn block')
+
+#agcn options:
+agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')
+agcn_opt.add_argument('-pool', type=str,default='max',help='agcn pool method: mean/max')
+
+
 cmd_args, _ = cmd_opt.parse_known_args()
 
 cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]

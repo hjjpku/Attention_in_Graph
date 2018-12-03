@@ -8,22 +8,30 @@ import numpy as np
 
 class AGCNBlock(nn.Module):
     def __init__(self,):
-        super.__init__(config,input_dim,hidden_dim,output_dim,gcn_layer=2,dropou=0.0)
+        super.__init__(config,input_dim,hidden_dim,gcn_layer=2,dropout=0.0)
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
-        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_add_self,config.gcn_normalize,dropout))
+        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_add_self,config.gcn_norm,dropout))
         for x in self.gcns:
-            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_add_self,config.gcn_normalize,dropout))
+            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_add_self,config.gcn_norm,dropout))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         torch.nn.init.normal_(self.w_a)
         
-        self.fc=nn.Linear(hidden_dim,output_dim)
-        torch.nn.init.xavier_normal_(self.fc.weight)
-        torch.nn.init.constant_(self.fc.bias)
+        #self.fc=nn.Linear(hidden_dim,output_dim)
+        #torch.nn.init.xavier_normal_(self.fc.weight)
+        #torch.nn.init.constant_(self.fc.bias)
         
         self.feat_mode=config.feat_mode
+        if self.feat_mode=='raw':
+            self.pass_dim=input_dim
+        elif self.feat_mode=='trans':
+            self.pass_dim=hidden_dim
+        elif self.feat_mode=='concat':
+            self.pass_dim=input_dim+hidden_dim
+        else:
+            raise Exception('unknown pass feature mode!')
         if config.pool=='mean':
             self.pool=self.mean_pool
         elif config.pool=='max':
@@ -31,7 +39,6 @@ class AGCNBlock(nn.Module):
 
         self.filt_percent=config.percent
         self.eps=config.eps
-        
 
     def forward(self,X,adj,mask):
     '''
@@ -40,8 +47,8 @@ class AGCNBlock(nn.Module):
         adj: adj matrix, [batch,node_num,node_num], dtype=float
         mask: mask for nodes, [batch,node_num]
     outputs:
-        out:unormalized classification prob, [batch,output_dim]
-        H: batch of node hidden features, [batch,node_num,output_dim]
+        out:unormalized classification prob, [batch,hidden_dim]
+        H: batch of node hidden features, [batch,node_num,pass_dim]
         new_adj: pooled new adj matrix, [batch, k_max, k_max]
         new_mask: [batch, k_max]
     '''
@@ -51,9 +58,9 @@ class AGCNBlock(nn.Module):
             hidden=gcn(hidden,adj)
         
         hidden=mask.unsqueeze(2)*hidden
-        out=self.fc(self.pool(hidden,mask))
+        out=self.pool(hidden,mask)
         
-#        att=torch.matmul(hidden,self.w_a).squeeze()
+#       att=torch.matmul(hidden,self.w_a).squeeze()
         att=torch.nn.functional.softmax(torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10,dim=1)
         
         if self.feat_mode=='raw':
@@ -62,8 +69,6 @@ class AGCNBlock(nn.Module):
             Z=hidden
         elif self.feat_mode=='concat':
             Z=torch.cat([X,hidden],dim=2)
-        else:
-            raise Exception('unknown output feature mode!')
         Z=att.unsqueeze(2)*Z
         
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
