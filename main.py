@@ -32,7 +32,8 @@ class Classifier(nn.Module):
         elif args.pool=='max':
             self.pool=self.max_pool
 
-        if self.model=='gcn':
+        #test
+        if self.model=='gcn' and 1:
             self.gcns=nn.ModuleList()
             x_size=args.input_dim
             for _ in range(self.num_layers):
