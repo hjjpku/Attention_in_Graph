@@ -25,16 +25,30 @@ class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
         
-        self.margin=args.margin
         self.num_layers=args.num_layers
-        self.agcns=nn.ModuleList()
-        self.agcns.append(AGCNBlock(args,args.input_dim,args.hidden_size,args.gcn_layers,args.dropout))
-        for _ in range(args.num_layers-1):
-            pass_dim=self.agcns[-1].pass_dim
-            self.agcns.append(AGCNBlock(args,pass_dim,args.hidden_dim,args.gcn_layers,args.dropout))
-        self.mlps=nn.ModuleList()
-        for _ in range(args.num_layers):
-            self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
+        self.model=args.model
+        if args.pool=='mean':
+            self.pool=self.mean_pool
+        elif args.pool=='max':
+            self.pool=self.max_pool
+
+        if self.model=='gcn':
+            self.gcns=nn.ModuleList()
+            x_size=args.input_dim
+            for _ in range(self.num_layers):
+                self.gcns.append(GCNBlock(x_size,arg.hidden_dim,arg.gcn_add_self,arg.gcn_norm,arg.dropout))
+                x_size=arg.hidden_dim
+            self.mlp=MLPClassifier(args.hidden_dim,args.mlp_hidden,args.num_class,args.mlp_layers,args.dropout)
+        elif self.model=='agcn':
+            self.margin=args.margin
+            self.agcns=nn.ModuleList()
+            x_size=args.input_dim
+            for _ in range(args.num_layers-1):
+                self.agcns.append(AGCNBlock(args,pass_dim,args.hidden_dim,args.gcn_layers,args.dropout))
+                x_size=self.agcns[-1].pass_dim
+            self.mlps=nn.ModuleList()
+            for _ in range(args.num_layers):
+                self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
         
     def PrepareFeatureLabel(self, batch_graph):
         labels = torch.LongTensor(len(batch_graph))
@@ -85,8 +99,7 @@ class Classifier(nn.Module):
 
         return node_feat, labels
 
-    def forward(self, batch_graph):
-#        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
+    def forward(self,batch_graph):
         '''
         node_feat: FloatTensor, [batch,node_num,input_dim]
         labels: LongTensor, [batch] 
@@ -94,6 +107,32 @@ class Classifier(nn.Module):
         mask: FloatTensor, [batch,node_num]
         '''
         node_feat, labels, adj,mask = self.PrepareFeatureLabel(batch_graph)
+        if self.model=='gcn':
+            return self.gcn_forward(node_feat,labels,adj,mask)
+        elif self.model=='agcn':
+            return self.agcn_forward(node_feat,labels,adj,mask)
+
+    @staticmethod
+    def mean_pool(x,mask):
+        return x.sum(dim=1)/(self.eps+mask.sum(dim=1,keepdim=True))
+
+    @staticmethod
+    def max_pool(x,mask):
+        #output: [batch,x.shape[2]]
+        m=(mask-1)*1e10
+        r,_=(x+m.unsqueeze(2)).max(dim=1)
+        return r
+
+    def gcn_forward(self,node_feat,labels,adj,mask):
+        X=node_feat
+        for i in range(self.num_layers):
+            X=self.gcns[i](X,adj)
+        embed=self.pool(X,mask)
+        logits,_,loss,acc=self.mlp(embed,labels)
+        return logits,loss,acc
+        
+    def agcn_forward(self,node_feat,labels,adj,mask):
+#        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
         
         cls_loss=0
         rank_loss=0
