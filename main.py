@@ -54,7 +54,7 @@ class Classifier(nn.Module):
 
         for i in range(len(batch_graph)):
             labels[i] = batch_graph[i].label
-            n_nodes += batch_graph[i].num_nodes # ??? why to gather the data in a batch?
+            n_nodes += batch_graph[i].num_nodes 
             if node_tag_flag == True:
                 concat_tag += batch_graph[i].node_tags
             if node_feat_flag == True:
@@ -89,10 +89,10 @@ class Classifier(nn.Module):
     def forward(self, batch_graph):
 #        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
         '''
-        node_feat: FloatTensor, [batch,max_node_num,input_dim]
+        node_feat: FloatTensor, [batch,node_num,input_dim]
         labels: LongTensor, [batch] 
-        adj: FloatTensor, [batch,max_node_num,node_num]
-        mask: FloatTensor, [batch,max_node_num]
+        adj: FloatTensor, [batch,node_num,node_num]
+        mask: FloatTensor, [batch,node_num]
         '''
         node_feat, labels, adj, mask = self.PrepareFeatureLabel(batch_graph)
         
