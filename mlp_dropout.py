@@ -48,14 +48,14 @@ class MLPClassifier(nn.Module):
         if self.num_layers==2:
             self.h1_weights = nn.Linear(input_size, hidden_size)
             self.h2_weights = nn.Linear(hidden_size, num_class)
-            torch.nn.init.xavier_normal_(self.h1_weights.weight)
-            torch.nn.init.constant_(self.h1_weights.bias,0)
-            torch.nn.init.xavier_normal_(self.h2_weights.weight)
-            torch.nn.init.constant_(self.h2_weights.bias,0)
+            torch.nn.init.xavier_normal(self.h1_weights.weight)
+            torch.nn.init.constant(self.h1_weights.bias,0)
+            torch.nn.init.xavier_normal(self.h2_weights.weight)
+            torch.nn.init.constant(self.h2_weights.bias,0)
         elif self.num_layers==1:
             self.h1_weights = nn.Linear(input_size,num_class) 
-            torch.nn.init.xavier_normal_(self.h1_weights.weight)
-            torch.nn.init.constant_(self.h1_weights.bias,0)
+            torch.nn.init.xavier_normal(self.h1_weights.weight)
+            torch.nn.init.constant(self.h1_weights.bias,0)
         self.dropout=dropout
         if self.dropout>0.001:
             self.dropout_layer=nn.Dropout(p=dropout)

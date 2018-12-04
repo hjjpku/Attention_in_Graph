@@ -7,8 +7,8 @@ import math
 import numpy as np
 
 class AGCNBlock(nn.Module):
-    def __init__(self,):
-        super.__init__(config,input_dim,hidden_dim,gcn_layer=2,dropout=0.0)
+    def __init__(self,config,input_dim,hidden_dim,gcn_layer=2,dropout=0.0):
+        super(AGCNBlock,self).__init__()
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
@@ -17,7 +17,7 @@ class AGCNBlock(nn.Module):
             self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_add_self,config.gcn_norm,dropout))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
-        torch.nn.init.normal_(self.w_a)
+        torch.nn.init.normal(self.w_a)
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
         #torch.nn.init.xavier_normal_(self.fc.weight)
@@ -41,7 +41,7 @@ class AGCNBlock(nn.Module):
         self.eps=config.eps
 
     def forward(self,X,adj,mask):
-    '''
+	'''
     input:
         X:  node input features , [batch,node_num,input_dim],dtype=float
         adj: adj matrix, [batch,node_num,node_num], dtype=float
@@ -51,16 +51,15 @@ class AGCNBlock(nn.Module):
         H: batch of node hidden features, [batch,node_num,pass_dim]
         new_adj: pooled new adj matrix, [batch, k_max, k_max]
         new_mask: [batch, k_max]
-    '''
-	hidden=X
+	'''
+        hidden=X
 
-        for gcn in self.gcns:
+	for gcn in self.gcns:
             hidden=gcn(hidden,adj)
         
         hidden=mask.unsqueeze(2)*hidden
         out=self.pool(hidden,mask)
         
-#       att=torch.matmul(hidden,self.w_a).squeeze()
         att=torch.nn.functional.softmax(torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10,dim=1)
         
         if self.feat_mode=='raw':
@@ -76,8 +75,8 @@ class AGCNBlock(nn.Module):
         
         _,top_index=torch.topk(att,k_max,dim=1)
         #assign_m: [batch,k_max,node_num]
-        new_mask=X.new_zeros((X.shape[0],k_max)
-        assign_m=X.new_zeros((X.shape[0],k_max,adj.shape[-1]))
+        new_mask=X.new_zeros(X.shape[0],k_max)
+        assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
         for i,k in enumerate(k_list):
             for j in range(int(k.item())):
                 assign_m[i][j]=adj[i][top_index[i][j]]
@@ -104,7 +103,7 @@ class AGCNBlock(nn.Module):
 class GCNBlock(nn.Module):
     def __init__(self, input_dim, output_dim, add_self=False, normalize_embedding=False,
             dropout=0.0, bias=True):
-        super().__init__()
+        super(GCNBlock,self).__init__()
         self.add_self = add_self
         self.dropout = dropout
         if dropout > 0.001:

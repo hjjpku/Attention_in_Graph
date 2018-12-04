@@ -45,7 +45,7 @@ class Classifier(nn.Module):
             self.agcns=nn.ModuleList()
             x_size=args.input_dim
             for _ in range(args.num_layers):
-                self.agcns.append(AGCNBlock(args,pass_dim,args.hidden_dim,args.gcn_layers,args.dropout))
+                self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,args.gcn_layers,args.dropout))
                 x_size=self.agcns[-1].pass_dim
             self.mlps=nn.ModuleList()
             for _ in range(args.num_layers):
