@@ -1,4 +1,5 @@
 from __future__ import print_function
+import torch
 import numpy as np
 import random
 from tqdm import tqdm
@@ -8,6 +9,7 @@ import pickle as cp
 import networkx as nx
 import pdb
 import argparse
+import scipy.sparse as sp
 
 cmd_opt = argparse.ArgumentParser(description='Argparser for graph_classification')
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
@@ -29,12 +31,14 @@ cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whethe
 
 #classifier options:
 cls_opt=cmd_opt.add_argument_group('classifier options')
+cls_opt.add_argument('-model', type=str, default='agcn', help='model choice:gcn/agcn')
 cls_opt.add_argument('-input_dim', type=int, default=1, help='input dimension of node features')
 cls_opt.add_argument('-hidden_dim', type=int, default=64, help='hidden size k')
 cls_opt.add_argument('-num_class', type=int, default=1000, help='classification number')
 cls_opt.add_argument('-num_layers', type=int, default=3, help='layer number of agcn block')
 cls_opt.add_argument('-mlp_hidden', type=int, default=100, help='hidden size of mlp layers')
 cls_opt.add_argument('-mlp_layers', type=int, default=2, help='layer numer of mlp layers')
+cls_opt.add_argument('-margin', type=int, default=0.05, help='margin value in rank loss')
 cls_opt.add_argument('-eps', type=int, default=1e-10, help='')
 
 #gcn options:
@@ -44,8 +48,10 @@ gcn_opt.add_argument('-gcn_norm', type=int, default=1, help='whether to normaliz
 gcn_opt.add_argument('-gcn_layers', type=int, default=2, help='layer number in each agcn block')
 
 #agcn options:
+agcn_opt=cmd_opt.add_argument_group('agcn options')
 agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')
 agcn_opt.add_argument('-pool', type=str,default='max',help='agcn pool method: mean/max')
+agcn_opt.add_argument('-percent', type=float,default=0.3,help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args, _ = cmd_opt.parse_known_args()
@@ -77,7 +83,7 @@ class Hjj_Graph(object):
             #adj = adj.tocoo()
 
         values = adj.data
-        indices = np.vstack((adj.row, adj,col))
+        indices = np.vstack((adj.row, adj.col))
 
         i = torch.LongTensor(indices)
         v = torch.FloatTensor(values)

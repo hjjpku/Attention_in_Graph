@@ -52,7 +52,7 @@ class AGCNBlock(nn.Module):
         new_adj: pooled new adj matrix, [batch, k_max, k_max]
         new_mask: [batch, k_max]
     '''
-        hidden=X
+	hidden=X
 
         for gcn in self.gcns:
             hidden=gcn(hidden,adj)

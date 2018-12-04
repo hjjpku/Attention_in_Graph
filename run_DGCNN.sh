@@ -14,7 +14,7 @@ sortpooling_k=0.6  # If k <= 1, then k is set to an integer so that k% of graphs
 FP_LEN=0  # final dense layer's input dimension, decided by data
 n_hidden=128  # final dense layer's hidden size
 bsize=50  # batch size
-dropout=True
+dropout=0.5
 
 # dataset-specific settings
 case ${DATA} in
@@ -79,12 +79,9 @@ if [ ${fold} == 0 ]; then
         -fold $i \
         -learning_rate $learning_rate \
         -num_epochs $num_epochs \
-        -hidden $n_hidden \
         -latent_dim $CONV_SIZE \
         -sortpooling_k $sortpooling_k \
-        -out_dim $FP_LEN \
         -batch_size $bsize \
-        -gm $gm \
         -mode $gpu_or_cpu \
         -dropout $dropout
   done
@@ -102,12 +99,9 @@ else
       -fold $fold \
       -learning_rate $learning_rate \
       -num_epochs $num_epochs \
-      -hidden $n_hidden \
       -latent_dim $CONV_SIZE \
       -sortpooling_k $sortpooling_k \
-      -out_dim $FP_LEN \
       -batch_size $bsize \
-      -gm $gm \
       -mode $gpu_or_cpu \
       -dropout $dropout \
       -test_number ${test_number}
