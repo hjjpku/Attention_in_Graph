@@ -52,60 +52,78 @@ class Classifier(nn.Module):
                 self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
         
     def PrepareFeatureLabel(self, batch_graph):
-        labels = torch.LongTensor(len(batch_graph))
-        n_nodes = 0
+        batch_size = len(batch_graph)
+        labels = torch.LongTensor(batch_size)
+        max_node_num = 0
+        
+
+        for i in range(batch_size):
+            labels[i] = batch_graph[i].label
+            max_node_num = max(max_node_num, batch_graph[i].num_nodes)
+
+        masks = torch.zeros(batch_size, max_node_num)
+        adjs =  torch.zeros(batch_size, max_node_num, max_node_num)   
 
         if batch_graph[0].node_tags is not None:
             node_tag_flag = True
-            concat_tag = []
+            batch_node_tag = torch.zeros(batch_size, max_node_num, args.feat_dim)
         else:
             node_tag_flag = False
 
         if batch_graph[0].node_features is not None:
             node_feat_flag = True
-            concat_feat = []
+            batch_node_feat = torch.zeros(batch_size, max_node_num, args.attr_dim)
         else:
             node_feat_flag = False
 
-        for i in range(len(batch_graph)):
-            labels[i] = batch_graph[i].label
-            n_nodes += batch_graph[i].num_nodes
+        for i in range(batch_size):
+            cur_node_num =  batch_graph[i].num_nodes 
+
+            #node tag feature
             if node_tag_flag == True:
-                concat_tag += batch_graph[i].node_tags
+                tmp_tag_idx = torch.LongTensor(batch_graph[i].node_tags).view(-1, 1)
+                tmp_node_tag = torch.zeros(cur_node_num, args.feat_dim)
+                tmp_node_tag.scatter_(1, tmp_tag_idx, 1)
+                batch_node_tag[i-1, 0:cur_node_num] = tmp_node_tag
+            #node attribute feature
             if node_feat_flag == True:
-                tmp = torch.from_numpy(batch_graph[i].node_features).type('torch.FloatTensor')
-                concat_feat.append(tmp)
+                tmp_node_fea = torch.from_numpy(batch_graph[i].node_features).type('torch.FloatTensor')
+                batch_node_feat[i-1, 0:cur_node_num] = tmp_node_fea
 
-        if node_tag_flag == True:
-            concat_tag = torch.LongTensor(concat_tag).view(-1, 1)
-            node_tag = torch.zeros(n_nodes, args.feat_dim)
-            node_tag.scatter_(1, concat_tag, 1)
+            #adjs
+            adjs[i-1, 0:cur_node_num, 0:cur_node_num] = batch_graph[i].adj
 
+            #masks  
+            masks[i-1,0:cur_node_num] = 1  
+            
+        #cobime the two kinds of node feature
         if node_feat_flag == True:
-            node_feat = torch.cat(concat_feat, 0)
+            node_feat = batch_node_feat.clone()
 
         if node_feat_flag and node_tag_flag:
             # concatenate one-hot embedding of node tags (node labels) with continuous node features
-            node_feat = torch.cat([node_tag.type_as(node_feat), node_feat], 1)
+            node_feat = torch.cat([batch_node_tag.type_as(node_feat), node_feat], 1)
         elif node_feat_flag == False and node_tag_flag == True:
-            node_feat = node_tag
+            node_feat = batch_node_tag
         elif node_feat_flag == True and node_tag_flag == False:
             pass
         else:
-            node_feat = torch.ones(n_nodes, 1)  # use all-one vector as node features
+            node_feat = torch.ones(batch_size,max_node_num,1)  # use all-one vector as node features
 
         if args.mode == 'gpu':
             node_feat = node_feat.cuda()
             labels = labels.cuda()
+            adjs = adjs.cuda()
+            masks = masks.cuda()
 
-        return node_feat, labels
+        return node_feat, labels, adjs, masks
 
     def forward(self,batch_graph):
         '''
-        node_feat: FloatTensor, [batch,node_num,input_dim]
+        node_feat: FloatTensor, [batch,max_node_num,input_dim]
         labels: LongTensor, [batch] 
-        adj: FloatTensor, [batch,node_num,node_num]
-        mask: FloatTensor, [batch,node_num]
+        adj: FloatTensor, [batch,max_node_num,max_node_num]
+        mask: FloatTensor, [batch,max_node_num]
         '''
         node_feat, labels, adj,mask = self.PrepareFeatureLabel(batch_graph)
         if self.model=='gcn':

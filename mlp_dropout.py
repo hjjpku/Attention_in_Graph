@@ -52,7 +52,7 @@ class MLPClassifier(nn.Module):
             torch.nn.init.constant_(self.h1_weights.bias,0)
             torch.nn.init.xavier_normal_(self.h2_weights.weight)
             torch.nn.init.constant_(self.h2_weights.bias,0)
-        elif self.num_layers==1;
+        elif self.num_layers==1:
             self.h1_weights = nn.Linear(input_size,num_class) 
             torch.nn.init.xavier_normal_(self.h1_weights.weight)
             torch.nn.init.constant_(self.h1_weights.bias,0)
