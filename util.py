@@ -15,8 +15,8 @@ cmd_opt.add_argument('-gm', default='mean_field', help='mean_field/loopy_bp')
 cmd_opt.add_argument('-data', default=None, help='data folder name')
 cmd_opt.add_argument('-batch_size', type=int, default=50, help='minibatch size')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
+cmd_opt.add_argument('-attr_dim', type=int, default=0, help='dimension of continues node attribute (node feature)')
 cmd_opt.add_argument('-feat_dim', type=int, default=0, help='dimension of discrete node feature (maximum node tag)')
-cmd_opt.add_argument('-num_class', type=int, default=0, help='#classes')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')
 cmd_opt.add_argument('-test_number', type=int, default=0, help='if specified, will overwrite -fold and use the last -test_number graphs as testing data')
 cmd_opt.add_argument('-num_epochs', type=int, default=1000, help='number of epochs')
@@ -58,30 +58,54 @@ cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
 if len(cmd_args.latent_dim) == 1:
     cmd_args.latent_dim = cmd_args.latent_dim[0]
 
-class S2VGraph(object):
+class Hjj_Graph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
         '''
             g: a networkx graph
             label: an integer graph label
             node_tags: a list of integer node tags
-            node_features: a numpy array of continuous node features
+            node_features: a numpy array of continuous node features  
         '''
         self.num_nodes = len(node_tags)
         self.node_tags = node_tags
         self.label = label
         self.node_features = node_features  # numpy array (node_num * feature_dim)
-        self.degs = list(dict(g.degree()).values())
+        self.degs = list(dict(g.degree()).values()) # type(g.degree()) is dict 
+        self.adj = self.__preprocess_adj(nx.adjacency_matrix(g)) # torch.FloatTensor
 
-        if len(g.edges()) != 0:
-            x, y = zip(*g.edges())
-            self.num_edges = len(x)        
-            self.edge_pairs = np.ndarray(shape=(self.num_edges, 2), dtype=np.int32)
-            self.edge_pairs[:, 0] = x
-            self.edge_pairs[:, 1] = y
-            self.edge_pairs = self.edge_pairs.flatten()
-        else:
-            self.num_edges = 0
-            self.edge_pairs = np.array([])
+    def __sparse_to_tensor(self, adj):
+        '''
+            adj: sparse matrix in COOrdinate format
+        '''
+        assert sp.isspmatrix_coo(adj), 'not coo format sparse matrix'
+            #adj = adj.tocoo()
+
+        values = adj.data
+        indices = np.vstack((adj.row, adj,col))
+
+        i = torch.LongTensor(indices)
+        v = torch.FloatTensor(values)
+        shape = adj.shape
+
+        return torch.sparse.FloatTensor(i, v, torch.Size(shape)).to_dense()
+
+    
+
+    def __normalize_adj(self, sp_adj):
+        adj = sp.coo_matrix(sp_adj)
+        rowsum = np.array(adj.sum(1))
+        d_inv_sqrt = np.power(rowsum, -0.5).flatten()
+        d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+        d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+        return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
+
+
+    def __preprocess_adj(self, sp_adj):
+        '''
+            sp_adj: sparse matrix in Compressed Sparse Row format
+        '''
+        adj_normalized = self.__normalize_adj(sp_adj + sp.eye(sp_adj.shape[0]))
+        return self.__sparse_to_tensor(adj_normalized)
 
 def load_data():
 
@@ -133,7 +157,7 @@ def load_data():
 
             #assert len(g.edges()) * 2 == n_edges  (some graphs in COLLAB have self-loops, ignored here)
             assert len(g) == n
-            g_list.append(S2VGraph(g, l, node_tags, node_features))
+            g_list.append(Hjj_Graph(g, l, node_tags, node_features))
     for g in g_list:
         g.label = label_dict[g.label]
     cmd_args.num_class = len(label_dict)
@@ -142,6 +166,8 @@ def load_data():
         cmd_args.attr_dim = node_features.shape[1] # dim of node features (attributes)
     else:
         cmd_args.attr_dim = 0
+    cmd_args.input_dim = cmd_args.feat_dim + cmd_args.attr_dim
+
 
     print('# classes: %d' % cmd_args.num_class)
     print('# maximum node tag: %d' % cmd_args.feat_dim)
