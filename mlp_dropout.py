@@ -16,6 +16,7 @@ import pdb
 sys.path.append('%s/pytorch_structure2vec-master/s2v_lib' % os.path.dirname(os.path.realpath(__file__)))
 from pytorch_util import weights_init
 
+
 class MLPRegression(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(MLPRegression, self).__init__()
@@ -48,14 +49,14 @@ class MLPClassifier(nn.Module):
         if self.num_layers==2:
             self.h1_weights = nn.Linear(input_size, hidden_size)
             self.h2_weights = nn.Linear(hidden_size, num_class)
-            torch.nn.init.xavier_normal(self.h1_weights.weight)
-            torch.nn.init.constant(self.h1_weights.bias,0)
-            torch.nn.init.xavier_normal(self.h2_weights.weight)
-            torch.nn.init.constant(self.h2_weights.bias,0)
+            torch.nn.init.xavier_normal_(self.h1_weights.weight.t())
+            torch.nn.init.constant_(self.h1_weights.bias,0)
+            torch.nn.init.xavier_normal_(self.h2_weights.weight.t())
+            torch.nn.init.constant_(self.h2_weights.bias,0)
         elif self.num_layers==1:
             self.h1_weights = nn.Linear(input_size,num_class) 
-            torch.nn.init.xavier_normal(self.h1_weights.weight)
-            torch.nn.init.constant(self.h1_weights.bias,0)
+            torch.nn.init.xavier_normal_(self.h1_weights.weight.t())
+            torch.nn.init.constant_(self.h1_weights.bias,0)
         self.dropout=dropout
         if self.dropout>0.001:
             self.dropout_layer=nn.Dropout(p=dropout)
@@ -74,13 +75,13 @@ class MLPClassifier(nn.Module):
         
         softmax_logits = F.softmax(logits,dim=1)
         logits = F.log_softmax(logits, dim=1)
+#        print('logits:',logits.t())
 
         if y is not None:
             loss = F.nll_loss(logits, y)
 
-            pred = logits.data.max(1, keepdim=True)[1]
-            acc = pred.eq(y.data.view_as(pred)).cpu().sum() / float(y.size()[0])
-            #acc = pred.eq(y.data.view_as(pred)).cpu().sum().item() / float(y.size()[0])
+            pred = logits.data.max(1)[1]
+            acc = pred.eq(y.data.view_as(pred)).cpu().sum().item() / float(y.size()[0])
             return logits,softmax_logits, loss, acc
         else:
             return logits

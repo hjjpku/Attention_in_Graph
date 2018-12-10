@@ -12,19 +12,22 @@ import argparse
 import scipy.sparse as sp
 
 cmd_opt = argparse.ArgumentParser(description='Argparser for graph_classification')
-cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
-cmd_opt.add_argument('-data', default=None, help='data folder name')
+cmd_opt.add_argument('-mode', default='gpu', help='cpu/gpu')
+cmd_opt.add_argument('-gpu', default='',type=str, help='gpu number')
+cmd_opt.add_argument('-name', default='train', help='')
+cmd_opt.add_argument('-data', default='NCI1', help='data folder name')
 cmd_opt.add_argument('-batch_size', type=int, default=50, help='minibatch size')
+cmd_opt.add_argument('-test_batch_size', type=int, default=3, help='test minibatch size')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-attr_dim', type=int, default=0, help='dimension of continues node attribute (node feature)')
 cmd_opt.add_argument('-feat_dim', type=int, default=0, help='dimension of discrete node feature (maximum node tag)')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')
 cmd_opt.add_argument('-test_number', type=int, default=0, help='if specified, will overwrite -fold and use the last -test_number graphs as testing data')
-cmd_opt.add_argument('-num_epochs', type=int, default=1000, help='number of epochs')
+cmd_opt.add_argument('-num_epochs', type=int, default=200, help='number of epochs')
 cmd_opt.add_argument('-latent_dim', type=str, default='64', help='dimension(s) of latent layers')
 cmd_opt.add_argument('-sortpooling_k', type=float, default=30, help='number of nodes kept after SortPooling')
-cmd_opt.add_argument('-learning_rate', type=float, default=0.0001, help='init learning_rate')
-cmd_opt.add_argument('-dropout', type=float, default=0.5, help='')
+cmd_opt.add_argument('-learning_rate', type=float, default=1e-3, help='init learning_rate')
+cmd_opt.add_argument('-dropout', type=float, default=0., help='')
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
 cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whether to extract final graph features')
 
@@ -38,23 +41,24 @@ cls_opt.add_argument('-num_class', type=int, default=1000, help='classification 
 cls_opt.add_argument('-num_layers', type=int, default=3, help='layer number of agcn block')
 cls_opt.add_argument('-mlp_hidden', type=int, default=100, help='hidden size of mlp layers')
 cls_opt.add_argument('-mlp_layers', type=int, default=2, help='layer numer of mlp layers')
-cls_opt.add_argument('-margin', type=int, default=0.05, help='margin value in rank loss')
+cls_opt.add_argument('-margin', type=int, default=0.02, help='margin value in rank loss')
 cls_opt.add_argument('-eps', type=int, default=1e-10, help='')
 
 #gcn options:
 gcn_opt=cmd_opt.add_argument_group('gcn options')
-gcn_opt.add_argument('-gcn_add_self', type=int, default=1, help='whether to use residual structure in gcn layers')
-gcn_opt.add_argument('-gcn_norm', type=int, default=1, help='whether to normalize gcn layers')
+gcn_opt.add_argument('-gcn_add_self', type=int, default=0, help='whether to use residual structure in gcn layers')
+gcn_opt.add_argument('-gcn_norm', type=int, default=0, help='whether to normalize gcn layers')
+gcn_opt.add_argument('-relu', type=int, default=1, help='whether to use relu')
 gcn_opt.add_argument('-gcn_layers', type=int, default=2, help='layer number in each agcn block')
 
 #agcn options:
 agcn_opt=cmd_opt.add_argument_group('agcn options')
 agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')
-agcn_opt.add_argument('-pool', type=str,default='max',help='agcn pool method: mean/max')
-agcn_opt.add_argument('-percent', type=float,default=0.3,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-pool', type=str,default='mean',help='agcn pool method: mean/max')
+agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 
 
-cmd_args, _ = cmd_opt.parse_known_args()
+cmd_args = cmd_opt.parse_args()
 
 cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
 if len(cmd_args.latent_dim) == 1:
@@ -68,12 +72,15 @@ class Hjj_Graph(object):
             node_tags: a list of integer node tags
             node_features: a numpy array of continuous node features  
         '''
+        super().__init__()
         self.num_nodes = len(node_tags)
         self.node_tags = node_tags
         self.label = label
         self.node_features = node_features  # numpy array (node_num * feature_dim)
         self.degs = list(dict(g.degree()).values()) # type(g.degree()) is dict 
+        self.g=g
         self.adj = self.__preprocess_adj(nx.adjacency_matrix(g)) # torch.FloatTensor
+        
 
     def __sparse_to_tensor(self, adj):
         '''
@@ -107,6 +114,7 @@ class Hjj_Graph(object):
             sp_adj: sparse matrix in Compressed Sparse Row format
         '''
         adj_normalized = self.__normalize_adj(sp_adj + sp.eye(sp_adj.shape[0]))
+        
         return self.__sparse_to_tensor(adj_normalized)
 
 def load_data():
@@ -160,6 +168,7 @@ def load_data():
             #assert len(g.edges()) * 2 == n_edges  (some graphs in COLLAB have self-loops, ignored here)
             assert len(g) == n
             g_list.append(Hjj_Graph(g, l, node_tags, node_features))
+   
     for g in g_list:
         g.label = label_dict[g.label]
     cmd_args.num_class = len(label_dict)
