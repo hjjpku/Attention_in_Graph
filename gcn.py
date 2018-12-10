@@ -20,6 +20,7 @@ class AGCNBlock(nn.Module):
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         torch.nn.init.normal_(self.w_a)
+#        self.tau=config.tau
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
         #torch.nn.init.xavier_normal_(self.fc.weight)

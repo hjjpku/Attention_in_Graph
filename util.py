@@ -78,7 +78,6 @@ class Hjj_Graph(object):
         self.label = label
         self.node_features = node_features  # numpy array (node_num * feature_dim)
         self.degs = list(dict(g.degree()).values()) # type(g.degree()) is dict 
-        self.g=g
         self.adj = self.__preprocess_adj(nx.adjacency_matrix(g)) # torch.FloatTensor
         
 

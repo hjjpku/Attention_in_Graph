@@ -185,7 +185,8 @@ class Classifier(nn.Module):
         pred=pred_logits.data.max(1)[1]
         acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
 
-        return logits,cls_loss/self.num_layers+rank_loss,acc
+        return logits,cls_loss/self.num_layers,acc
+#        return logits,cls_loss/self.num_layers+rank_loss,acc
 
     def output_features(self, batch_graph):
         node_feat, labels = self.PrepareFeatureLabel(batch_graph)
@@ -221,7 +222,7 @@ def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=50):
         all_targets += targets
         if (not classifier.training) and (pos==0 or pos==10):
             print('=======================test minibatch:',pos,'==================================')
-        logits, loss, acc = classifier(batch_graph,is_print=(pos==11 or pos==87))
+        logits, loss, acc = classifier(batch_graph,is_print=(pos==1000 or pos==1000))
         all_scores.append(logits[:, 1].detach())  # for binary classification
 
         if optimizer is not None:
@@ -280,7 +281,7 @@ if __name__ == '__main__':
     for epoch in range(args.num_epochs):
         random.shuffle(train_idxes)
         classifier.train()
-        avg_loss = loop_dataset(train_graphs, classifier, train_idxes, optimizer=optimizer)
+        avg_loss = loop_dataset(train_graphs, classifier, train_idxes, optimizer=optimizer,bsize=args.batch_size)
         if not args.printAUC:
             avg_loss[2] = 0.0
         print('\033[92maverage training of epoch %d: loss %.5f acc %.5f auc %.5f\033[0m' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2]))
