@@ -19,7 +19,7 @@ def visualize(orig_graph, att_list, index_list, A, mask_list):
 	# add node tag
 	for i, tag in enumerate(orig_graph.node_tags):
 		node = ag.get_node(list(g.nodes())[i])
-		node.attr('label') = tag
+		node.attr['label'] = tag
 	ag.layout()
 	file_name = path + 'origin.png'
 	ag.draw(file_name)
