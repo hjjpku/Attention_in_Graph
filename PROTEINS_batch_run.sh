@@ -1,4 +1,3 @@
-
 #! /bin/bash
 
 #python main.py -model=gcn -num_layers=3 >>gcn_3layer.txt
@@ -10,8 +9,18 @@
 #python main.py -model=agcn -softmax=neibor -tau=5 -percent=0.75 >>agcn_tau5_k0.75.txt
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
+#python main.py -softmax=global -adj_norm=none -data=PROTEINS
+#python main.py -softmax=global -adj_norm=diag -data=PROTEINS
+#python main.py -softmax=global -adj_norm=tanh -data=PROTEINS
+#python main.py -softmax=global -adj_norm=mix -data=PROTEINS
 
-python main.py -softmax=global -adj_norm=none -name=normal -eps=1e-10 
-python main.py -softmax=global -adj_norm=diag -name=normal -eps=1e-10
-python main.py -softmax=global -adj_norm=tanh -name=normal -eps=1e-10
-python main.py -softmax=global -adj_norm=mix -name=normal -eps=1e-10
+python main.py -softmax=neibor -adj_norm=none -data=PROTEINS
+python main.py -softmax=neibor -adj_norm=diag -data=PROTEINS
+python main.py -softmax=neibor -adj_norm=tanh -data=PROTEINS
+python main.py -softmax=neibor -adj_norm=mix -data=PROTEINS
+
+python main.py -softmax=mix -adj_norm=none -data=PROTEINS
+python main.py -softmax=mix -adj_norm=diag -data=PROTEINS
+python main.py -softmax=mix -adj_norm=tanh -data=PROTEINS
+python main.py -softmax=mix -adj_norm=mix -data=PROTEINS
+

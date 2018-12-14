@@ -205,13 +205,14 @@ class Classifier(nn.Module):
             pred_logits=pred_logits+softmax_logits
             cls_loss[i]=loss
 
-            p_mask=softmax_logits.new_zeros(softmax_logits.shape,dtype=torch.uint8)
-            for j,cls in enumerate(labels):
-                p_mask[j][cls]=1
-            p_t.append(torch.masked_select(softmax_logits,p_mask))
-            if i>0:
-                tmp=p_t[i-1]-p_t[i]+self.margin
-                rank_loss[i-1]=torch.max(tmp,torch.zeros_like(tmp)).mean()
+            if self.rank_loss:
+                p_mask=softmax_logits.new_zeros(softmax_logits.shape,dtype=torch.uint8)
+                for j,cls in enumerate(labels):
+                    p_mask[j][cls]=1
+                p_t.append(torch.masked_select(softmax_logits,p_mask))
+                if i>0:
+                    tmp=p_t[i-1]-p_t[i]+self.margin
+                    rank_loss[i-1]=torch.max(tmp,torch.zeros_like(tmp)).mean()
 
         pred=pred_logits.data.max(1)[1]
         avg_acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
@@ -228,7 +229,7 @@ class Classifier(nn.Module):
             loss=cls_loss.mean()+rank_loss.mean()
         else:
             loss=cls_loss.mean()
-            return logits,loss,acc,avg_acc,visualize_tools
+        return logits,loss,acc,avg_acc,list(zip(*visualize_tools))
 
 def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=50):
 
