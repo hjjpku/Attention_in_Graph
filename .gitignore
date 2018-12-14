@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+log
+save
+visual
+todo
+tags
+nohup.out
+
 # C extensions
 *.so
 

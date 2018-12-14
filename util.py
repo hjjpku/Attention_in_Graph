@@ -1,4 +1,5 @@
 from __future__ import print_function
+import sys
 import torch
 import numpy as np
 import random
@@ -15,54 +16,58 @@ cmd_opt = argparse.ArgumentParser(description='Argparser for graph_classificatio
 cmd_opt.add_argument('-mode', default='gpu', help='cpu/gpu')
 cmd_opt.add_argument('-gpu', default='',type=str, help='gpu number')
 cmd_opt.add_argument('-name', default='train', help='')
+cmd_opt.add_argument('-print', type=int, default=0, help='')
+cmd_opt.add_argument('-logdir', default='log', help='')
+cmd_opt.add_argument('-savedir', default='save', help='')
+cmd_opt.add_argument('-save', default=1, help='whether to save running metadata')
+cmd_opt.add_argument('-save_freq', default=10, help='to save running metadata')
+cmd_opt.add_argument('-sample', default='0,1,2', type=str,help='sample test minibatch for visulization')
 cmd_opt.add_argument('-data', default='NCI1', help='data folder name')
-cmd_opt.add_argument('-batch_size', type=int, default=50, help='minibatch size')
-cmd_opt.add_argument('-test_batch_size', type=int, default=3, help='test minibatch size')
+cmd_opt.add_argument('-bsize', type=int, default=50, help='minibatch size')
+cmd_opt.add_argument('-test_bsize', type=int, default=1, help='test minibatch size')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
-cmd_opt.add_argument('-attr_dim', type=int, default=0, help='dimension of continues node attribute (node feature)')
-cmd_opt.add_argument('-feat_dim', type=int, default=0, help='dimension of discrete node feature (maximum node tag)')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')
 cmd_opt.add_argument('-test_number', type=int, default=0, help='if specified, will overwrite -fold and use the last -test_number graphs as testing data')
-cmd_opt.add_argument('-num_epochs', type=int, default=200, help='number of epochs')
-cmd_opt.add_argument('-latent_dim', type=str, default='64', help='dimension(s) of latent layers')
-cmd_opt.add_argument('-sortpooling_k', type=float, default=30, help='number of nodes kept after SortPooling')
-cmd_opt.add_argument('-learning_rate', type=float, default=1e-3, help='init learning_rate')
+cmd_opt.add_argument('-epochs', type=int, default=500, help='number of epochs')
+cmd_opt.add_argument('-lr', type=float, default=1e-3, help='init learning_rate')
 cmd_opt.add_argument('-dropout', type=float, default=0., help='')
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
-cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whether to extract final graph features')
 
 
 #classifier options:
 cls_opt=cmd_opt.add_argument_group('classifier options')
 cls_opt.add_argument('-model', type=str, default='agcn', help='model choice:gcn/agcn')
-cls_opt.add_argument('-input_dim', type=int, default=1, help='input dimension of node features')
 cls_opt.add_argument('-hidden_dim', type=int, default=64, help='hidden size k')
 cls_opt.add_argument('-num_class', type=int, default=1000, help='classification number')
 cls_opt.add_argument('-num_layers', type=int, default=3, help='layer number of agcn block')
 cls_opt.add_argument('-mlp_hidden', type=int, default=100, help='hidden size of mlp layers')
 cls_opt.add_argument('-mlp_layers', type=int, default=2, help='layer numer of mlp layers')
-cls_opt.add_argument('-margin', type=int, default=0.02, help='margin value in rank loss')
-cls_opt.add_argument('-eps', type=int, default=1e-10, help='')
+cls_opt.add_argument('-eps', type=float, default=1e-20, help='')
 
-#gcn options:
 gcn_opt=cmd_opt.add_argument_group('gcn options')
-gcn_opt.add_argument('-gcn_add_self', type=int, default=0, help='whether to use residual structure in gcn layers')
+gcn_opt.add_argument('-gcn_res', type=int, default=0, help='whether to use residual structure in gcn layers')
 gcn_opt.add_argument('-gcn_norm', type=int, default=0, help='whether to normalize gcn layers')
 gcn_opt.add_argument('-relu', type=int, default=1, help='whether to use relu')
-gcn_opt.add_argument('-gcn_layers', type=int, default=2, help='layer number in each agcn block')
+gcn_opt.add_argument('-gcn_layers', type=int, default=6, help='layer number in each agcn block')
 
 #agcn options:
 agcn_opt=cmd_opt.add_argument_group('agcn options')
 agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')
 agcn_opt.add_argument('-pool', type=str,default='mean',help='agcn pool method: mean/max')
+agcn_opt.add_argument('-softmax', type=str,default='global',help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-khop', type=int,default=1,help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-adj_norm', type=str,default='none',help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in rank loss')
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args = cmd_opt.parse_args()
 
-cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
-if len(cmd_args.latent_dim) == 1:
-    cmd_args.latent_dim = cmd_args.latent_dim[0]
+#cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
+#if len(cmd_args.latent_dim) == 1:
+#    cmd_args.latent_dim = cmd_args.latent_dim[0]
 
 class Hjj_Graph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
@@ -74,12 +79,32 @@ class Hjj_Graph(object):
         '''
         super().__init__()
         self.num_nodes = len(node_tags)
-        self.node_tags = node_tags
+        self.node_tags = self.__rerange_tags(node_tags, list(g.nodes())) # rerangenodes index
         self.label = label
-        self.node_features = node_features  # numpy array (node_num * feature_dim)
+        self.g=g
+        self.node_features = self.__rerange_fea(node_features, list(g.nodes()))  # numpy array (node_num * feature_dim)
         self.degs = list(dict(g.degree()).values()) # type(g.degree()) is dict 
         self.adj = self.__preprocess_adj(nx.adjacency_matrix(g)) # torch.FloatTensor
         
+    def __rerange_fea(self, node_features, node_list):
+        if node_features == None or node_features == []:
+            return node_features
+        else:
+            new_node_features = []
+            for i in range(node_features.shape[0]):
+                new_node_features.append(node_features[node_list[i]])
+
+            new_node_features = np.vstack(new_node_features)
+            return new_node_features
+   
+    def __rerange_tags(self, node_tags, node_list):
+        new_node_tags = []
+        if node_tags != []:
+            for i in range(len(node_tags)):
+                new_node_tags.append(node_tags[node_list[i]])
+
+        return new_node_tags
+
 
     def __sparse_to_tensor(self, adj):
         '''
@@ -96,7 +121,6 @@ class Hjj_Graph(object):
         shape = adj.shape
 
         return torch.sparse.FloatTensor(i, v, torch.Size(shape)).to_dense()
-
     
 
     def __normalize_adj(self, sp_adj):
@@ -191,3 +215,16 @@ def load_data():
 
 
 
+def create_process_name():
+    argvs=sys.argv[1:]
+    tmp=[]
+    has_model=0
+    has_data=0
+    for x in argvs:
+        if ('-model=' in x) or ('-data=' in x):
+            continue
+        n,v=x.strip('-').split('=')
+        tmp.append(n+'^'+v)
+    name='_'.join(tmp)
+    name='_'.join([cmd_args.model,name,cmd_args.data])
+    return name

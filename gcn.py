@@ -14,12 +14,17 @@ class AGCNBlock(nn.Module):
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
-        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_add_self,config.gcn_norm,dropout,relu))
+        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
         for x in self.gcns:
-            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_add_self,config.gcn_norm,dropout))
+            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
+        self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
         torch.nn.init.normal_(self.w_a)
+        '''
+        torch.nn.init.uniform_(self.w_a,-1,1)
+        '''
+        torch.nn.init.uniform_(self.w_b,-1,1)
 #        self.tau=config.tau
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
@@ -39,9 +44,13 @@ class AGCNBlock(nn.Module):
             self.pool=self.mean_pool
         elif config.pool=='max':
             self.pool=self.max_pool
+        self.softmax=config.softmax
+        self.khop=config.khop
+        self.adj_norm=config.adj_norm
 
         self.filt_percent=config.percent
         self.eps=config.eps
+        self.tau=nn.Parameter(torch.tensor(config.tau))
 
     def forward(self,X,adj,mask,is_print=False):
         '''
@@ -63,7 +72,22 @@ class AGCNBlock(nn.Module):
         hidden=mask.unsqueeze(2)*hidden
         out=self.pool(hidden,mask)
         
-        att=torch.nn.functional.softmax(torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10,dim=1)
+        att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
+        att_a=torch.nn.functional.softmax(att_a,dim=1)
+        att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
+        att_b_max,_=att_b.max(dim=1,keepdim=True)
+        att_b=torch.exp(att_b-att_b_max)
+        for _ in range(self.khop):
+            denom=torch.matmul(adj,att_b.unsqueeze(2))
+        denom=denom.squeeze()+self.eps
+        att_b=att_b/denom
+
+        if self.softmax=='global':
+            att=att_a
+        elif self.softmax=='neibor':
+            att=att_b
+        elif self.softmax=='mix':
+            att=att_a+att_b
         
         if self.feat_mode=='raw':
             Z=X
@@ -91,21 +115,33 @@ class AGCNBlock(nn.Module):
         assign_m=assign_m/(assign_m.sum(dim=1,keepdim=True)+self.eps)
         
         new_adj=torch.matmul(torch.matmul(assign_m,adj),torch.transpose(assign_m,1,2))
-#        new_adj=torch.tanh(new_adj)
+        
+        if self.adj_norm=='tanh' or self.adj_norm=='mix':
+            new_adj=torch.tanh(new_adj)
+        elif self.adj_norm=='diag' or self.adj_norm=='mix':
+            diag_elem=torch.pow(new_adj.sum(dim=2)+self.eps,-0.5)
+            diag=new_adj.new_zeros(new_adj.shape)
+            for i,x in enumerate(diag_elem):
+                diag[i]=torch.diagflat(x)
+            new_adj=torch.matmul(torch.matmul(diag,new_adj),diag)
 
+        visualize_tools=[]
         if (not self.training) and is_print:
            
             print('**********************************')
+            print('node_feat:',X.type(),X.shape)
+            print(X)
+
+            print('**********************************')
             print('att:',att.type(),att.shape)
             print(att)
+            visualize_tools.append(att[0])
 
             print('**********************************')
             print('top_index:',top_index.type(),top_index.shape)
             print(top_index)
+            visualize_tools.append(top_index[0])
 
-            print('**********************************')
-            print('new_mask:',new_mask.type(),new_mask.shape)
-            print(new_mask)
 
             print('**********************************')
             print('adj:',adj.type(),adj.shape)
@@ -118,10 +154,17 @@ class AGCNBlock(nn.Module):
             print('**********************************')
             print('new_adj:',new_adj.type(),new_adj.shape)
             print(new_adj)
+            visualize_tools.append(new_adj[0])
+
+            print('**********************************')
+            print('new_mask:',new_mask.type(),new_mask.shape)
+            print(new_mask)
+            visualize_tools.append(new_mask.sum())
+            
 
         H=torch.matmul(assign_m,Z)
 
-        return out,H,new_adj,new_mask
+        return out,H,new_adj,new_mask,visualize_tools
     
     def mean_pool(self,x,mask):
         return x.sum(dim=1)/(self.eps+mask.sum(dim=1,keepdim=True))

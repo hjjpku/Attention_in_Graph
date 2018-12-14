@@ -17,6 +17,7 @@ from sklearn import metrics
 from gcn import *
 from tensorboard_logger import configure,log_value
 import gpu
+from setproctitle import *
 
 np.set_printoptions(threshold=np.inf)
 torch.set_printoptions(precision=2,threshold=float('inf'))
@@ -24,17 +25,33 @@ torch.set_printoptions(precision=2,threshold=float('inf'))
 sys.path.append('%s/pytorch_structure2vec-master/s2v_lib' % os.path.dirname(os.path.realpath(__file__)))
 from embedding import EmbedMeanField, EmbedLoopyBP
 
-from util import cmd_args, load_data
+from util import cmd_args, load_data,create_process_name
 args=cmd_args
+
+pname=create_process_name()
+setproctitle(pname)
+
+if not os.path.exists(args.savedir):
+    os.makedirs(args.savedir)
+if not os.path.exists(args.logdir):
+    os.makedirs(args.logdir)
+save_path=os.path.join(args.savedir,pname)
+log_path=os.path.join(args.logdir,pname+'.txt')
+if os.path.exists(save_path):
+    os.system('rm -rf '+save_path)
+os.makedirs(save_path)
+if not args.print:
+    f=open(log_path,'a+')
+    sys.stderr=f
+    sys.stdout=f
+
 gpu.find_idle_gpu(args.gpu)
-
-configure(os.path.join('./runs',args.name))
-
+        
 class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
         
-        self.num_layers=args.num_layers
+        self.rank_loss=args.rank_loss
         self.model=args.model
         self.eps=args.eps
         if args.pool=='mean':
@@ -43,14 +60,19 @@ class Classifier(nn.Module):
             self.pool=self.max_pool
 
         if self.model=='gcn':
+            self.num_layers=args.gcn_layers
             self.gcns=nn.ModuleList()
             x_size=args.input_dim
             for _ in range(self.num_layers):
-                self.gcns.append(GCNBlock(x_size,args.hidden_dim,args.gcn_add_self,args.gcn_norm,args.dropout,args.relu))
+                self.gcns.append(GCNBlock(x_size,args.hidden_dim,args.gcn_res,args.gcn_norm,args.dropout,args.relu))
                 x_size=args.hidden_dim
             self.mlp=MLPClassifier(args.hidden_dim,args.mlp_hidden,args.num_class,args.mlp_layers,args.dropout)
+
         elif self.model=='agcn':
             self.margin=args.margin
+            self.num_layers=args.num_layers
+            assert args.gcn_layers%self.num_layers==0
+            args.gcn_layers=args.gcn_layers//self.num_layers
             self.agcns=nn.ModuleList()
             x_size=args.input_dim
             for _ in range(args.num_layers):
@@ -158,51 +180,58 @@ class Classifier(nn.Module):
             X=self.gcns[i](X,adj)
         embed=self.pool(X,mask)
         logits,_,loss,acc=self.mlp(embed,labels)
-        return logits,loss,acc
+        return logits,loss,acc,acc,None
         
     def agcn_forward(self,node_feat,labels,adj,mask,is_print=False):
 #        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
         
-        cls_loss=0
-        rank_loss=0
+        cls_loss=node_feat.new_zeros(self.num_layers)
+        rank_loss=node_feat.new_zeros(self.num_layers-1)
         X=node_feat
         p_t=[]
         pred_logits=0
+        visualize_tools=[]
 
         for i in range(self.num_layers):
-            embed,X,adj,mask=self.agcns[i](X,adj,mask,is_print=is_print)
+            embed,X,adj,mask,visualize_tool=self.agcns[i](X,adj,mask,is_print=is_print)
+
+            visualize_tools.append(visualize_tool)
+
             logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
+
+            '''
+            cls_loss=loss
+            '''
             pred_logits=pred_logits+softmax_logits
-            cls_loss=cls_loss+loss
-            #?
+            cls_loss[i]=loss
+
             p_mask=softmax_logits.new_zeros(softmax_logits.shape,dtype=torch.uint8)
             for j,cls in enumerate(labels):
                 p_mask[j][cls]=1
             p_t.append(torch.masked_select(softmax_logits,p_mask))
             if i>0:
                 tmp=p_t[i-1]-p_t[i]+self.margin
-                rank_loss=rank_loss+torch.max(tmp,torch.zeros_like(tmp)).mean()
+                rank_loss[i-1]=torch.max(tmp,torch.zeros_like(tmp)).mean()
+
         pred=pred_logits.data.max(1)[1]
-        acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
+        avg_acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
 
-        return logits,cls_loss/self.num_layers,acc
-#        return logits,cls_loss/self.num_layers+rank_loss,acc
-
-    def output_features(self, batch_graph):
-        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
-        embed = self.s2v(batch_graph, node_feat, None)
-        return embed, labels
+        if is_print:
+            if self.training:
+                print('training sample loss')
+            else:
+                print('test sample loss')
+            print('cls_loss:',cls_loss)
+            print('rank_loss:',rank_loss)
         
+        if self.rank_loss:
+            loss=cls_loss.mean()+rank_loss.mean()
+        else:
+            loss=cls_loss.mean()
+            return logits,loss,acc,avg_acc,visualize_tools
 
-def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=50):
-#    g=[]
-#    idx=[]
-#    for i,x in enumerate(g_list):
-#        if x.num_nodes<=20:
-#            g.append(x)
-#            idx.append(i)
-#    g_list=g
-#    sample_idxes=list(range(len(g_list)))
+def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=50):
+
     total_loss = []
     total_iters = (len(sample_idxes) + (bsize - 1) * (optimizer is None)) // bsize
     pbar = range(total_iters)
@@ -211,19 +240,22 @@ def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=50):
     all_scores = []
     n_samples = 0
     
-    print_pos=random.randrange(0,total_iters,1)
+    visual_pos=[int(x) for x in args.sample.strip().split(',')]
+    
     for pos in pbar:
         selected_idx = sample_idxes[pos * bsize : (pos + 1) * bsize]
-#        tmp=[idx[i] for i in selected_idx]
-#        print('idx:',tmp)
-#        print(selected_idx)
         batch_graph = [g_list[idx] for idx in selected_idx]
         targets = [g_list[idx].label for idx in selected_idx]
         all_targets += targets
-        if (not classifier.training) and (pos==0 or pos==10):
+
+        if (not classifier.training) and (pos in visual_pos) and args.model=='agcn':
             print('=======================test minibatch:',pos,'==================================')
-        logits, loss, acc = classifier(batch_graph,is_print=(pos==1000 or pos==1000))
+
+        logits, loss, acc,avg_acc,visualize_tools = classifier(batch_graph,is_print=(pos in visual_pos))
         all_scores.append(logits[:, 1].detach())  # for binary classification
+
+        if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model=='agcn':
+            torch.save([batch_graph[0]]+visualize_tools,os.path.join(save_path,'sample%03d_epoch%03d.vis'%(pos,epoch)))
 
         if optimizer is not None:
             optimizer.zero_grad()
@@ -233,7 +265,7 @@ def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=50):
         loss = loss.data.cpu().numpy()
 #        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc) )
 
-        total_loss.append( np.array([loss, acc]) * len(selected_idx))
+        total_loss.append( np.array([loss, acc,avg_acc]) * len(selected_idx))
 
         n_samples += len(selected_idx)
     if optimizer is None:
@@ -250,9 +282,10 @@ def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=50):
     
     return avg_loss
 
+def main():
 
-if __name__ == '__main__':
     print(args)
+
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -260,53 +293,52 @@ if __name__ == '__main__':
     train_graphs, test_graphs = load_data()
     print('# train: %d, # test: %d' % (len(train_graphs), len(test_graphs)))
 
-    if args.sortpooling_k <= 1:
-        num_nodes_list = sorted([g.num_nodes for g in train_graphs + test_graphs])
-        args.sortpooling_k = num_nodes_list[int(math.ceil(args.sortpooling_k * len(num_nodes_list))) - 1]
-        args.sortpooling_k = max(10, args.sortpooling_k)
-        print('k used in SortPooling is: ' + str(args.sortpooling_k))
-
     classifier = Classifier()
     print(classifier)
     for n,p in classifier.named_parameters():
-        print(n,p.shape,p.type())
+        print(n,p.type(),p.shape)
     if args.mode == 'gpu':
         classifier = classifier.cuda()
 
-    optimizer = optim.Adam(classifier.parameters(), lr=args.learning_rate)
-
+    optimizer = optim.Adam(classifier.parameters(), lr=args.lr)
+    
     train_idxes = list(range(len(train_graphs)))
     best_loss = None
     best_acc=float('-inf')
-    for epoch in range(args.num_epochs):
+    best_avg_acc=float('-inf')
+    best_epoch=0
+    best_avg_epoch=0
+    for epoch in range(args.epochs):
         random.shuffle(train_idxes)
         classifier.train()
-        avg_loss = loop_dataset(train_graphs, classifier, train_idxes, optimizer=optimizer,bsize=args.batch_size)
+        avg_loss = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
         if not args.printAUC:
-            avg_loss[2] = 0.0
-        print('\033[92maverage training of epoch %d: loss %.5f acc %.5f auc %.5f\033[0m' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2]))
-        log_value('train acc',avg_loss[1],epoch)
+            avg_loss[3] = 0.0
+        print('=====>average training of epoch %d: loss %.5f acc %.5f avg_acc %.5f auc %.5f' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2],avg_loss[3]))
+#        log_value('train acc',avg_loss[1],epoch)
 
         classifier.eval()
 
-        test_loss = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),bsize=args.test_batch_size)
-        best_acc=max(best_acc,test_loss[1])
-        if not args.printAUC:
-            test_loss[2] = 0.0
-        print('\033[93maverage test of epoch %d: loss %.5f acc %.5f best acc%.5f\033[0m' % (epoch, test_loss[0], test_loss[1], best_acc))
-        log_value('test acc',test_loss[1],epoch)
+        test_loss = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
+        if best_acc<test_loss[1]:
+            best_acc=test_loss[1]
+            best_epoch=epoch
+        if best_avg_acc<test_loss[2]:
+            best_avg_acc=test_loss[2]
+            best_avg_epoch=epoch
 
-    with open('acc_results.txt', 'a+') as f:
-        f.write(str(test_loss[1]) + '\n')
+        if not args.printAUC:
+            test_loss[3] = 0.0
+        print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d)' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch))
+#        log_value('test acc',test_loss[1],epoch)
 
     if args.printAUC:
         with open('auc_results.txt', 'a+') as f:
-            f.write(str(test_loss[2]) + '\n')
+            f.write(str(test_loss[-1]) + '\n')
 
-    if args.extract_features:
-        features, labels = classifier.output_features(train_graphs)
-        labels = labels.type('torch.FloatTensor')
-        np.savetxt('extracted_features_train.txt', torch.cat([labels.unsqueeze(1), features.cpu()], dim=1).detach().numpy(), '%.4f')
-        features, labels = classifier.output_features(test_graphs)
-        labels = labels.type('torch.FloatTensor')
-        np.savetxt('extracted_features_test.txt', torch.cat([labels.unsqueeze(1), features.cpu()], dim=1).detach().numpy(), '%.4f')
+
+if __name__ == '__main__':
+    main()
+
+if not args.print:
+    f.close()
