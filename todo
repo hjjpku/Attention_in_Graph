@@ -1,0 +1,3 @@
+add tau=1 in 1-hop softmax
+add k-hop softmax
+add labmda in w_a w_b sum
