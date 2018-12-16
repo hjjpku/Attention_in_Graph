@@ -51,6 +51,7 @@ class AGCNBlock(nn.Module):
         self.filt_percent=config.percent
         self.eps=config.eps
         self.tau=nn.Parameter(torch.tensor(config.tau))
+        self.lamda=nn.Parameter(torch.tensor(config.lamda))
 
     def forward(self,X,adj,mask,is_print=False):
         '''
@@ -76,9 +77,10 @@ class AGCNBlock(nn.Module):
         att_a=torch.nn.functional.softmax(att_a,dim=1)
         att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
         att_b_max,_=att_b.max(dim=1,keepdim=True)
-        att_b=torch.exp(att_b-att_b_max)
+        att_b=torch.exp((att_b-att_b_max)*self.tau)
+        denom=att_b
         for _ in range(self.khop):
-            denom=torch.matmul(adj,att_b.unsqueeze(2))
+            denom=torch.matmul(adj,denom.unsqueeze(2))
         denom=denom.squeeze()+self.eps
         att_b=att_b/denom
 
@@ -87,7 +89,7 @@ class AGCNBlock(nn.Module):
         elif self.softmax=='neibor':
             att=att_b
         elif self.softmax=='mix':
-            att=att_a+att_b
+            att=att_a+att_b*self.lamda
         
         if self.feat_mode=='raw':
             Z=X

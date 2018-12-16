@@ -42,7 +42,7 @@ cls_opt.add_argument('-num_class', type=int, default=1000, help='classification 
 cls_opt.add_argument('-num_layers', type=int, default=3, help='layer number of agcn block')
 cls_opt.add_argument('-mlp_hidden', type=int, default=100, help='hidden size of mlp layers')
 cls_opt.add_argument('-mlp_layers', type=int, default=2, help='layer numer of mlp layers')
-cls_opt.add_argument('-eps', type=float, default=1e-20, help='')
+cls_opt.add_argument('-eps', type=float, default=1e-10, help='')
 
 gcn_opt=cmd_opt.add_argument_group('gcn options')
 gcn_opt.add_argument('-gcn_res', type=int, default=0, help='whether to use residual structure in gcn layers')
@@ -61,6 +61,7 @@ agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: g
 agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in rank loss')
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args = cmd_opt.parse_args()
