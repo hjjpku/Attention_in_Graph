@@ -18,6 +18,7 @@ from gcn import *
 from tensorboard_logger import configure,log_value
 import gpu
 from setproctitle import *
+import time
 
 np.set_printoptions(threshold=np.inf)
 torch.set_printoptions(precision=2,threshold=float('inf'))
@@ -310,6 +311,7 @@ def main():
     best_epoch=0
     best_avg_epoch=0
     for epoch in range(args.epochs):
+        start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
         avg_loss = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)

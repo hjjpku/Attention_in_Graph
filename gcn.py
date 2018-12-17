@@ -78,9 +78,9 @@ class AGCNBlock(nn.Module):
         att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
         att_b_max,_=att_b.max(dim=1,keepdim=True)
         att_b=torch.exp((att_b-att_b_max)*self.tau)
-        denom=att_b
+        denom=att_b.unsqueeze(2)
         for _ in range(self.khop):
-            denom=torch.matmul(adj,denom.unsqueeze(2))
+            denom=torch.matmul(adj,denom)
         denom=denom.squeeze()+self.eps
         att_b=att_b/denom
 

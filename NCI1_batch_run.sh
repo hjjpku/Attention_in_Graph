@@ -10,15 +10,12 @@
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
 
-python main.py -softmax=neibor -adj_norm=none -khop=1 -tau=5
 python main.py -softmax=neibor -adj_norm=none -khop=2
 python main.py -softmax=neibor -adj_norm=none -khop=2 -tau=5
 python main.py -softmax=neibor -adj_norm=none -khop=3
-python main.py -softmax=neibor -adj_norm=diag -khop=1 -tau=5 
 python main.py -softmax=neibor -adj_norm=diag -khop=2 
 python main.py -softmax=neibor -adj_norm=diag -khop=2 -tau=5 
 python main.py -softmax=neibor -adj_norm=diag -khop=3
-python main.py -softmax=neibor -adj_norm=tanh -khop=1 -tau=5
 python main.py -softmax=neibor -adj_norm=tanh -khop=2
 python main.py -softmax=neibor -adj_norm=tanh -khop=2 -tau=5
 python main.py -softmax=neibor -adj_norm=tanh -khop=3
