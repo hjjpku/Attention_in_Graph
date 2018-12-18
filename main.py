@@ -230,7 +230,7 @@ class Classifier(nn.Module):
             loss=cls_loss.mean()+rank_loss.mean()
         else:
             loss=cls_loss.mean()
-        return logits,loss,acc,avg_acc,list(zip(*visualize_tools))
+        return logits,loss,acc,avg_acc,visualize_tools
 
 def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=50):
 
@@ -257,7 +257,10 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         all_scores.append(logits[:, 1].detach())  # for binary classification
 
         if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model=='agcn':
-            torch.save([batch_graph[0]]+visualize_tools,os.path.join(save_path,'sample%03d_epoch%03d.vis'%(pos,epoch)))
+            visualize_tools=list(zip(*visualize_tools))
+            visualize_tools=[[x.detach().cpu().numpy() for x in y] for y in visualize_tools]
+            np.save(os.path.join(save_path,'sample%03d_epoch%03d.npy'%(pos,epoch)),[batch_graph[0]]+visualize_tools)
+            
 
         if optimizer is not None:
             optimizer.zero_grad()
@@ -332,7 +335,7 @@ def main():
 
         if not args.printAUC:
             test_loss[3] = 0.0
-        print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d)' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch))
+        print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d) time:%.0fs' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch,time.time()-start_time))
 #        log_value('test acc',test_loss[1],epoch)
 
     if args.printAUC:
