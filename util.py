@@ -50,6 +50,8 @@ gcn_opt.add_argument('-gcn_norm', type=int, default=0, help='whether to normaliz
 gcn_opt.add_argument('-relu', type=int, default=1, help='whether to use relu')
 gcn_opt.add_argument('-gcn_layers', type=int, default=6, help='layer number in each agcn block')
 
+gcn_opt.add_argument('-att_norm', type=int, default=0, help='layer number in each agcn block')
+
 #agcn options:
 agcn_opt=cmd_opt.add_argument_group('agcn options')
 agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')

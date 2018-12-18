@@ -44,7 +44,10 @@ class AGCNBlock(nn.Module):
             self.pool=self.mean_pool
         elif config.pool=='max':
             self.pool=self.max_pool
+
         self.softmax=config.softmax
+        if self.softmax=='gcn':
+            self.att_gcn=GCNBlock(2,1,config.gcn_res,config.gcn_norm,dropout,relu)
         self.khop=config.khop
         self.adj_norm=config.adj_norm
 
@@ -52,6 +55,8 @@ class AGCNBlock(nn.Module):
         self.eps=config.eps
         self.tau=nn.Parameter(torch.tensor(config.tau))
         self.lamda=nn.Parameter(torch.tensor(config.lamda))
+        
+        self.att_norm=config.att_norm
 
     def forward(self,X,adj,mask,is_print=False):
         '''
@@ -74,7 +79,6 @@ class AGCNBlock(nn.Module):
         out=self.pool(hidden,mask)
         
         att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
-        att_a=torch.nn.functional.softmax(att_a,dim=1)
         att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
         att_b_max,_=att_b.max(dim=1,keepdim=True)
         att_b=torch.exp((att_b-att_b_max)*self.tau)
@@ -85,12 +89,18 @@ class AGCNBlock(nn.Module):
         att_b=att_b/denom
 
         if self.softmax=='global':
-            att=att_a
+            att=torch.nn.functional.softmax(att_a,dim=1)
         elif self.softmax=='neibor':
             att=att_b
         elif self.softmax=='mix':
-            att=att_a+att_b*self.lamda
-        
+            att=torch.nn.functional.softmax(att_a,dim=1)+att_b*self.lamda
+        elif self.softmax=='gcn':
+            att=torch.stack([att_a,att_b],dim=2)
+            if self.att_norm:
+                att=torch.nn.functional.normalize(att,dim=1)
+            att=self.att_gcn(att,adj)
+            att=torch.nn.functional.softmax(att.squeeze(2),dim=1)
+                
         if self.feat_mode=='raw':
             Z=X
         elif self.feat_mode=='trans':

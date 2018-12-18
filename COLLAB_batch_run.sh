@@ -10,20 +10,18 @@
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
 
-python main.py -softmax=global -adj_norm=none -data=COLLAB
-python main.py -softmax=global -adj_norm=diag -data=COLLAB
-python main.py -softmax=global -adj_norm=tanh -data=COLLAB
-python main.py -softmax=global -adj_norm=mix -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=0 -softmax=global -adj_norm=none -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=COLLAB
 
-python main.py -softmax=neibor -adj_norm=none -data=COLLAB
-python main.py -softmax=neibor -adj_norm=diag -data=COLLAB
-python main.py -softmax=neibor -adj_norm=tanh -data=COLLAB
-python main.py -softmax=neibor -adj_norm=mix -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=COLLAB
 
-python main.py -softmax=mix -adj_norm=none -data=COLLAB
-python main.py -softmax=mix -adj_norm=diag -data=COLLAB
-python main.py -softmax=mix -adj_norm=tanh -data=COLLAB
-python main.py -softmax=mix -adj_norm=mix -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=1 -softmax=global -adj_norm=none -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=COLLAB
+
+python main.py -hidden_dim=128 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=COLLAB
+python main.py -hidden_dim=128 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=COLLAB
+
 #python main.py -softmax=neibor -adj_norm=none 
 #python main.py -softmax=neibor -adj_norm=diag 
 #python main.py -softmax=neibor -adj_norm=tanh 
