@@ -72,6 +72,9 @@ class AGCNBlock(nn.Module):
         '''
         hidden=X
 
+        if adj.shape[-1]>200:
+            is_print=False
+
         for gcn in self.gcns:
             hidden=gcn(hidden,adj)
         
