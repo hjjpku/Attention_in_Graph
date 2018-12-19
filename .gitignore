@@ -111,8 +111,6 @@ venv.bak/
 .mypy_cache/
 
 tags
-agcn*.txt
-gcn*.txt
 nohup*
 log
 runs/
