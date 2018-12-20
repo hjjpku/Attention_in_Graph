@@ -259,7 +259,7 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model=='agcn':
             visualize_tools=list(zip(*visualize_tools))
             visualize_tools=[[x.detach().cpu().numpy() for x in y] for y in visualize_tools]
-            np.save(os.path.join(save_path,'sample%03d_epoch%03d.npy'%(pos,epoch)),[batch_graph[0]]+visualize_tools)
+            np.save(os.path.join(save_path,'sample%03d_epoch%03d.npy'%(pos,epoch)),[batch_graph[0].g,batch_graph[0].node_tags]+visualize_tools)
             
 
         if optimizer is not None:
