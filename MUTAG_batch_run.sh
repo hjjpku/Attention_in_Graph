@@ -10,66 +10,28 @@
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
 
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=MUTAG -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=MUTAG -fold=1
+for i in $(seq 8 10)
+do 
+	python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=MUTAG -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=MUTAG -fold=$i
 
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=MUTAG -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=MUTAG -fold=2
+	python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=MUTAG -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=MUTAG -fold=$i
 
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=MUTAG -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=MUTAG -fold=3
+	python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=MUTAG -fold=$i
+	python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=$i
 
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=MUTAG -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=MUTAG -fold=1
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=MUTAG -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=MUTAG -fold=2
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=MUTAG -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=MUTAG -fold=3
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=MUTAG -fold=1
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=1
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=MUTAG -fold=2
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=2
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=MUTAG -fold=3
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=3
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=PTC -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=MUTAG -fold=1
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=1
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=PTC -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=MUTAG -fold=2
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=2
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=PTC -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=MUTAG -fold=3
-python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=3
-
+	python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=PTC -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=MUTAG -fold=$i
+	python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=MUTAG -fold=$i
+done
 
 
 

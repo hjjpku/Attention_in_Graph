@@ -10,29 +10,15 @@
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
 
-python main.py  -softmax=global -adj_norm=none -data=COLLAB -percent=0.4
-python main.py  -softmax=global -adj_norm=tanh -data=COLLAB -percent=0.4 
+python main.py -gcn_norm=0 -softmax=global -adj_norm=none -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=0 -softmax=neibor -adj_norm=none -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=1 -softmax=global -adj_norm=none -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=1 -softmax=neibor -adj_norm=none -data=REDDIT-MULTI-12K
 
-python main.py  -softmax=neibor -adj_norm=none -data=COLLAB -percent=0.4
-python main.py  -softmax=neibor -adj_norm=tanh -data=COLLAB -percent=0.4
-
-python main.py  -softmax=global -adj_norm=none -data=PROTEINS -percent=0.4
-python main.py  -softmax=global -adj_norm=tanh -data=PROTEINS -percent=0.4 
-
-python main.py  -softmax=neibor -adj_norm=none -data=PROTEINS -percent=0.4
-python main.py  -softmax=neibor -adj_norm=tanh -data=PROTEINS -percent=0.4
-
-python main.py  -softmax=global -adj_norm=none -data=COLLAB -percent=0.3
-python main.py  -softmax=global -adj_norm=tanh -data=COLLAB -percent=0.3 
-
-python main.py  -softmax=neibor -adj_norm=none -data=COLLAB -percent=0.3
-python main.py  -softmax=neibor -adj_norm=tanh -data=COLLAB -percent=0.3
-
-python main.py  -softmax=global -adj_norm=none -data=PROTEINS -percent=0.3
-python main.py  -softmax=global -adj_norm=tanh -data=PROTEINS -percent=0.3 
-
-python main.py  -softmax=neibor -adj_norm=none -data=PROTEINS -percent=0.3
-python main.py  -softmax=neibor -adj_norm=tanh -data=PROTEINS -percent=0.3
+python main.py -gcn_norm=0 -softmax=global -adj_norm=tanh -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=1 -softmax=global -adj_norm=tanh -data=REDDIT-MULTI-12K
+python main.py -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=REDDIT-MULTI-12K
 
 #python main.py -softmax=neibor -adj_norm=none 
 #python main.py -softmax=neibor -adj_norm=diag 

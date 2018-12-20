@@ -23,7 +23,7 @@ cmd_opt.add_argument('-save', default=1, help='whether to save running metadata'
 cmd_opt.add_argument('-save_freq', default=10, help='to save running metadata')
 cmd_opt.add_argument('-sample', default='0,1,2', type=str,help='sample test minibatch for visulization')
 cmd_opt.add_argument('-data', default='NCI1', help='data folder name')
-cmd_opt.add_argument('-bsize', type=int, default=50, help='minibatch size')
+cmd_opt.add_argument('-bsize', type=int, default=20, help='minibatch size')
 cmd_opt.add_argument('-test_bsize', type=int, default=1, help='test minibatch size')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')

@@ -10,23 +10,6 @@
 #python main.py -model=agcn -softmax=neibor -tau=10 -percent=0.5 >>agcn_tau10_k0.5.txt
 #python main.py -model=agcn -softmax=neibor -tau=20 -percent=0.5 >>agcn_tau20_k0.5.txt
 
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=DD
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=DD
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=none -data=ENZYMES
-python main.py -bsize=20 -gcn_norm=1 -softmax=global -adj_norm=tanh -data=ENZYMES
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=DD
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=DD
-
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=none -data=ENZYMES
-python main.py -bsize=20 -gcn_norm=0 -softmax=global -adj_norm=tanh -data=ENZYMES
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=DD
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=DD
-
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=none -data=ENZYMES
-python main.py -bsize=20 -gcn_norm=1 -softmax=neibor -adj_norm=tanh -data=ENZYMES
 
 python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=none -data=DD
 python main.py -bsize=20 -gcn_norm=0 -softmax=neibor -adj_norm=tanh -data=DD
