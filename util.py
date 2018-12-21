@@ -64,6 +64,7 @@ agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-wb_init', type=str,default='uniform',help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args = cmd_opt.parse_args()
@@ -224,7 +225,7 @@ def create_process_name():
     has_model=0
     has_data=0
     for x in argvs:
-        if ('-model=' in x) or ('-data=' in x):
+        if ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
             continue
         n,v=x.strip('-').split('=')
         tmp.append(n+'^'+v)

@@ -24,7 +24,11 @@ class AGCNBlock(nn.Module):
         '''
         torch.nn.init.uniform_(self.w_a,-1,1)
         '''
-        torch.nn.init.uniform_(self.w_b,-1,1)
+        if config.wb_init=='uniform':
+            torch.nn.init.uniform_(self.w_b,-1,1)
+        elif config.wb_init=='normal':
+            torch.nn.init.normal_(self.w_b)
+        
 #        self.tau=config.tau
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
@@ -72,7 +76,7 @@ class AGCNBlock(nn.Module):
         '''
         hidden=X
 
-        if adj.shape[-1]>200:
+        if adj.shape[-1]>100:
             is_print=False
 
         for gcn in self.gcns:
@@ -85,15 +89,23 @@ class AGCNBlock(nn.Module):
         att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
         att_b_max,_=att_b.max(dim=1,keepdim=True)
         att_b=torch.exp((att_b-att_b_max)*self.tau)
-        denom=att_b.unsqueeze(2)
-        for _ in range(self.khop):
-            denom=torch.matmul(adj,denom)
-        denom=denom.squeeze()+self.eps
-        att_b=att_b/denom
+        if self.softmax=='neibor' or self.softmax=='mix':
+            denom=att_b.unsqueeze(2)
+            for _ in range(self.khop):
+                denom=torch.matmul(adj,denom)
+            denom=denom.squeeze()+self.eps
+            att_b=att_b/denom
+        elif self.softmax=='hardnei':
+            denom=adj
+            for _ in range(self.khop-1):
+                denom=torch.matmul(adj,denom)
+            denom=(denom>0).type_as(att_b)
+            denom=torch.matmul(denom,att_b.unsqueeze(2)).squeeze()+self.eps
+            att_b=att_b/denom
 
         if self.softmax=='global':
             att=torch.nn.functional.softmax(att_a,dim=1)
-        elif self.softmax=='neibor':
+        elif self.softmax=='neibor' or self.softmax=='hardnei':
             att=att_b
         elif self.softmax=='mix':
             att=torch.nn.functional.softmax(att_a,dim=1)+att_b*self.lamda
@@ -190,7 +202,6 @@ class AGCNBlock(nn.Module):
         m=(mask-1)*1e10
         r,_=(x+m.unsqueeze(2)).max(dim=1)
         return r
-
 # GCN basic operation
 class GCNBlock(nn.Module):
     def __init__(self, input_dim, output_dim, add_self=False, normalize_embedding=False,
