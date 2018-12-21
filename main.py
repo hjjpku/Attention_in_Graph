@@ -15,7 +15,7 @@ from DGCNN_embedding import DGCNN
 from mlp_dropout import MLPClassifier
 from sklearn import metrics
 from gcn import *
-from tensorboard_logger import configure,log_value
+#from tensorboard_logger import configure,log_value
 import gpu
 from setproctitle import *
 import time
