@@ -11,6 +11,7 @@ tags
 nohup.out
 
 # C extensions
+*.sh
 *.so
 
 # Distribution / packaging
