@@ -225,7 +225,7 @@ def create_process_name():
     has_model=0
     has_data=0
     for x in argvs:
-        if ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
+        if ('gpu' in x) or ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
             continue
         n,v=x.strip('-').split('=')
         tmp.append(n+'^'+v)
