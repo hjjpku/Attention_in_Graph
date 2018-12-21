@@ -23,7 +23,7 @@ cmd_opt.add_argument('-save', default=1, help='whether to save running metadata'
 cmd_opt.add_argument('-save_freq', default=10, help='to save running metadata')
 cmd_opt.add_argument('-sample', default='0,1,2', type=str,help='sample test minibatch for visulization')
 cmd_opt.add_argument('-data', default='NCI1', help='data folder name')
-cmd_opt.add_argument('-bsize', type=int, default=50, help='minibatch size')
+cmd_opt.add_argument('-bsize', type=int, default=20, help='minibatch size')
 cmd_opt.add_argument('-test_bsize', type=int, default=1, help='test minibatch size')
 cmd_opt.add_argument('-seed', type=int, default=1, help='seed')
 cmd_opt.add_argument('-fold', type=int, default=1, help='fold (1..10)')
@@ -64,6 +64,7 @@ agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-wb_init', type=str,default='uniform',help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args = cmd_opt.parse_args()
@@ -224,7 +225,7 @@ def create_process_name():
     has_model=0
     has_data=0
     for x in argvs:
-        if ('-model=' in x) or ('-data=' in x):
+        if ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
             continue
         n,v=x.strip('-').split('=')
         tmp.append(n+'^'+v)

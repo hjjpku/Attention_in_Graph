@@ -1,0 +1,55 @@
+#! /bin/bash
+
+#python main.py -model=hardnei -num_layers=3 >>hardnei_3layer.txt
+##python main.py -model=hardnei -num_layers=6 -learning_rate=1e-3 >>hardnei_6layer_1e-3.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=1 -percent=0.5 >>ahardnei_tau1_k0.5.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=5 -percent=0.5 >>ahardnei_tau5_k0.5.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=5 -percent=0.3 >>ahardnei_tau5_k0.3.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=5 -percent=0.2 >>ahardnei_tau5_k0.2.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=5 -percent=0.75 >>ahardnei_tau5_k0.75.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=10 -percent=0.5 >>ahardnei_tau10_k0.5.txt
+#python main.py -model=ahardnei -softmax=neibor -tau=20 -percent=0.5 >>ahardnei_tau20_k0.5.txt
+
+python main.py   -softmax=hardnei -adj_norm=none -data=PROTEINS -khop=2
+
+python main.py   -softmax=hardnei -adj_norm=none -data=PROTEINS -khop=3
+
+python main.py   -softmax=hardnei -adj_norm=none -data=PROTEINS -khop=4
+
+python main.py   -softmax=hardnei -adj_norm=none -data=PROTEINS -khop=5
+
+python main.py   -softmax=hardnei -adj_norm=none -data=COLLAB -khop=2
+
+python main.py   -softmax=hardnei -adj_norm=none -data=COLLAB -khop=3
+
+python main.py   -softmax=hardnei -adj_norm=none -data=COLLAB -khop=4
+
+
+
+
+#python main.py -softmax=neibor -adj_norm=none 
+#python main.py -softmax=neibor -adj_norm=diag 
+#python main.py -softmax=neibor -adj_norm=tanh 
+#python main.py -softmax=neibor -adj_norm=mix 
+#python main.py -softmax=mix -adj_norm=none 
+#python main.py -softmax=mix -adj_norm=diag 
+#python main.py -softmax=mix -adj_norm=tanh 
+#python main.py -softmax=mix -adj_norm=mix 
+
+#
+#
+#python main.py -model=ahardnei -learning_rate=1e-1 >>ahardnei_1e-1.txt
+#python main.py -model=ahardnei -learning_rate=1e-2 >>ahardnei_1e-2.txt
+#python main.py -model=ahardnei -learning_rate=1e-3 >>ahardnei_1e-3.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 >>ahardnei_1e-4.txt
+#python main.py -model=ahardnei -learning_rate=1e-5 >>ahardnei_1e-5.txt
+#python main.py -model=ahardnei -learning_rate=1e-6 >>ahardnei_1e-6.txt
+#
+#python main.py -model=ahardnei -learning_rate=1e-4 -feat_mode=raw >>ahardnei_1e-4_raw.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -hardnei_layers=4 >>ahardnei_1e-4_4_layer.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -gcn_norm=1 >>ahardnei_1e-4_norm.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -relu=0 >>ahardnei_1e-4_no_relu.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -mlp_layers=1 >>ahardnei_1e-4_1_mlp.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -pool=max >>ahardnei_1e-4_max_pool.txt
+#python main.py -model=ahardnei -learning_rate=1e-4 -hidden_dim=128 >>ahardnei_1e-4_128_hidden.txt
+#
