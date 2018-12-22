@@ -29,7 +29,6 @@ class AGCNBlock(nn.Module):
         elif config.wb_init=='normal':
             torch.nn.init.normal_(self.w_b)
         
-#        self.tau=config.tau
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
         #torch.nn.init.xavier_normal_(self.fc.weight)
@@ -57,7 +56,10 @@ class AGCNBlock(nn.Module):
 
         self.filt_percent=config.percent
         self.eps=config.eps
-        self.tau=nn.Parameter(torch.tensor(config.tau))
+        if config.tau==-1.:
+            self.tau=nn.Parameter(torch.tensor(1),requires_grad=False)
+        else:
+            self.tau=nn.Parameter(torch.tensor(config.tau))
         self.lamda=nn.Parameter(torch.tensor(config.lamda))
         
         self.att_norm=config.att_norm
@@ -65,7 +67,7 @@ class AGCNBlock(nn.Module):
     def forward(self,X,adj,mask,is_print=False):
         '''
     input:
-        X:  node input features , [batch,node_num,input_dim],dtype=float
+            X:  node input features , [batch,node_num,input_dim],dtype=float
         adj: adj matrix, [batch,node_num,node_num], dtype=float
         mask: mask for nodes, [batch,node_num]
     outputs:
