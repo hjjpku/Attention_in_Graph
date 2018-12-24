@@ -46,6 +46,7 @@ if not args.print:
     sys.stderr=f
     sys.stdout=f
 
+train_graphs, test_graphs = load_data()
 gpu.find_idle_gpu(args.gpu)
         
 class Classifier(nn.Module):
@@ -295,8 +296,8 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    train_graphs, test_graphs = load_data()
     print('# train: %d, # test: %d' % (len(train_graphs), len(test_graphs)))
+
 
     classifier = Classifier()
     print(classifier)
@@ -348,6 +349,9 @@ def main():
     if args.printAUC:
         with open('auc_results.txt', 'a+') as f:
             f.write(str(test_loss[-1]) + '\n')
+
+    with open(os.path.join(args.logdir,'acc_results.txt'), 'a+') as f:
+        f.write(pname+': '+'%.4f(%d) %.4f(%d)'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))
         
 
 if __name__ == '__main__':

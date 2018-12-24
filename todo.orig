@@ -1,7 +1,10 @@
 tune labmda in w_a w_b sum
 masked batch norm
+<<<<<<< HEAD
 consider st*X
+=======
 
 dd dropout
 
 dd 5-10 layer relu
+>>>>>>> 322036337fdfb76082a2eabc82d5a677d10e9514

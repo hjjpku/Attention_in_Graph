@@ -75,7 +75,7 @@ class AGCNBlock(nn.Module):
         '''
         hidden=X
 
-        if adj.shape[-1]>100:
+        if adj.shape[-1]>50:
             is_print=False
 
         for gcn in self.gcns:
