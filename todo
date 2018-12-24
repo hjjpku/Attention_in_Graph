@@ -1,2 +1,3 @@
 tune labmda in w_a w_b sum
 masked batch norm
+consider st*X

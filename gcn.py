@@ -9,14 +9,14 @@ import numpy as np
 torch.set_printoptions(precision=2,threshold=float('inf'))
 
 class AGCNBlock(nn.Module):
-    def __init__(self,config,input_dim,hidden_dim,gcn_layer=2,dropout=0.0,relu=False):
+    def __init__(self,config,input_dim,hidden_dim,gcn_layer=2,dropout=0.0,relu=0):
         super(AGCNBlock,self).__init__()
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
         self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
-        for x in self.gcns:
-            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout))
+        for x in range(gcn_layer-1):
+            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
@@ -24,10 +24,7 @@ class AGCNBlock(nn.Module):
         '''
         torch.nn.init.uniform_(self.w_a,-1,1)
         '''
-        if config.wb_init=='uniform':
-            torch.nn.init.uniform_(self.w_b,-1,1)
-        elif config.wb_init=='normal':
-            torch.nn.init.normal_(self.w_b)
+        torch.nn.init.uniform_(self.w_b,-1,1)
         
         
         #self.fc=nn.Linear(hidden_dim,output_dim)
@@ -207,7 +204,7 @@ class AGCNBlock(nn.Module):
 # GCN basic operation
 class GCNBlock(nn.Module):
     def __init__(self, input_dim, output_dim, add_self=False, normalize_embedding=False,
-            dropout=0.0,relu=False, bias=True):
+            dropout=0.0,relu=0, bias=True):
         super(GCNBlock,self).__init__()
         self.add_self = add_self
         self.dropout = dropout

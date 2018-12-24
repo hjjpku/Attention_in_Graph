@@ -64,7 +64,6 @@ agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
-agcn_opt.add_argument('-wb_init', type=str,default='uniform',help='agcn node keep percent(=k/node_num)')
 
 
 cmd_args = cmd_opt.parse_args()
