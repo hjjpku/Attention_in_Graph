@@ -11,6 +11,7 @@ tags
 nohup.out
 
 # C extensions
+old
 *.sh
 *.so
 

@@ -15,8 +15,8 @@ class AGCNBlock(nn.Module):
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
         self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
-        for x in self.gcns:
-            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout))
+        for x in range(gcn_layer-1):
+            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
@@ -78,7 +78,7 @@ class AGCNBlock(nn.Module):
         '''
         hidden=X
 
-        if adj.shape[-1]>100:
+        if adj.shape[-1]>50:
             is_print=False
 
         for gcn in self.gcns:
