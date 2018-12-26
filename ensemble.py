@@ -38,9 +38,8 @@ if not os.path.exists(args.logdir):
     os.makedirs(args.logdir)
 save_path=os.path.join(args.savedir,pname)
 log_path=os.path.join(args.logdir,pname+'.txt')
-if os.path.exists(save_path):
-    os.system('rm -rf '+save_path)
-os.makedirs(save_path)
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
 if not args.print:
     f=open(log_path,'a+')
     sys.stderr=f
@@ -210,7 +209,7 @@ def loop_dataset(g_list, classifier,ensembler, sample_idxes, epoch,optimizer=Non
         loss = loss.data.cpu().numpy()
 #        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc) )
 
-        total_loss.append( np.array([loss, acc,avg_acc]) * len(selected_idx))
+        total_loss.append( np.array([loss, acc]) * len(selected_idx))
 
         n_samples += len(selected_idx)
     if optimizer is None:
@@ -238,7 +237,7 @@ def main():
     print('# train: %d, # test: %d' % (len(train_graphs), len(test_graphs)))
 
     classifier = Classifier()
-    ensembler = MLPClassifier(args.hidden_dim*3,args.mlp_hidden,args.num_class,num_layers=args.mlp_layers,dropout=args.dropout)
+    ensembler = MLPClassifier(args.hidden_dim*3,args.esm_hidden,args.num_class,num_layers=args.mlp_layers,dropout=args.esm_drop,indrop=args.esm_indrop)
     print(classifier)
     print(ensembler)
     for n,p in classifier.named_parameters():
@@ -250,7 +249,7 @@ def main():
     classifier.load_state_dict(torch.load(os.path.join(save_path,'best_model.pth')))
 
     classifier.eval()
-    optimizer = optim.Adam(ensembler.parameters(), lr=args.lr)
+    optimizer = optim.Adam(ensembler.parameters(), lr=args.esm_lr)
     
     train_idxes = list(range(len(train_graphs)))
     best_acc=float('-inf')
@@ -258,20 +257,22 @@ def main():
     for epoch in range(args.epochs):
         start_time=time.time()
         random.shuffle(train_idxes)
+        ensembler.train()
         avg_loss = loop_dataset(train_graphs, classifier, ensembler,train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
         if not args.printAUC:
-            avg_loss[3] = 0.0
+            avg_loss[2] = 0.0
         print('=====>average training of epoch %d: loss %.5f acc %.5f auc %.5f' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2]))
 #        log_value('train acc',avg_loss[1],epoch)
 
-        test_loss = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
+        ensembler.eval()
+        test_loss = loop_dataset(test_graphs, classifier, ensembler,list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
         if best_acc<test_loss[1]:
             best_acc=test_loss[1]
             best_epoch=epoch
             torch.save(ensembler.state_dict(),os.path.join(save_path,'best_ensembler.pth'))
 
         if not args.printAUC:
-            test_loss[3] = 0.0
+            test_loss[2] = 0.0
         print('=====>average test of epoch %d: loss %.5f acc %.5f best acc %.5f(%d) time:%.0fs' % (epoch, test_loss[0], test_loss[1],best_acc,best_epoch,time.time()-start_time))
 
     if args.printAUC:

@@ -14,12 +14,9 @@ class AGCNBlock(nn.Module):
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         self.gcns=nn.ModuleList()
-        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
-        for i in range(gcn_layer-1):
-            if i==gcn_layer-2 and (not config.lastrelu):
-                self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,0))
-            else:
-                self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
+        self.gcns.append(GCNBlock(input_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
+        for x in range(gcn_layer-1):
+            self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.gcn_res,config.gcn_norm,dropout,relu))
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
@@ -28,7 +25,12 @@ class AGCNBlock(nn.Module):
         torch.nn.init.uniform_(self.w_a,-1,1)
         '''
         torch.nn.init.uniform_(self.w_b,-1,1)
-
+        
+        
+        #self.fc=nn.Linear(hidden_dim,output_dim)
+        #torch.nn.init.xavier_normal_(self.fc.weight)
+        #torch.nn.init.constant_(self.fc.bias)
+        
         self.feat_mode=config.feat_mode
         if self.feat_mode=='raw':
             self.pass_dim=input_dim
@@ -56,10 +58,8 @@ class AGCNBlock(nn.Module):
         else:
             self.tau=nn.Parameter(torch.tensor(config.tau))
         self.lamda=nn.Parameter(torch.tensor(config.lamda))
-
-        self.att_norm=config.att_norm
         
-        self.dnorm=config.dnorm
+        self.att_norm=config.att_norm
 
     def forward(self,X,adj,mask,is_print=False):
         '''
@@ -79,7 +79,7 @@ class AGCNBlock(nn.Module):
             is_print=False
 
         for gcn in self.gcns:
-            hidden=gcn(hidden,adj,mask)
+            hidden=gcn(hidden,adj)
         
         hidden=mask.unsqueeze(2)*hidden
         out=self.pool(hidden,mask)
@@ -94,9 +94,6 @@ class AGCNBlock(nn.Module):
                 denom=torch.matmul(adj,denom)
             denom=denom.squeeze()+self.eps
             att_b=att_b/denom
-            if self.dnorm:
-                att_b=att_b/(torch.diagonal(adj,0,1,2)+self.eps)
-            
         elif self.softmax=='hardnei':
             denom=adj
             for _ in range(self.khop-1):
@@ -206,18 +203,14 @@ class AGCNBlock(nn.Module):
         return r
 # GCN basic operation
 class GCNBlock(nn.Module):
-    def __init__(self, input_dim, output_dim, bn=0,add_self=0, normalize_embedding=0,
+    def __init__(self, input_dim, output_dim, add_self=False, normalize_embedding=False,
             dropout=0.0,relu=0, bias=True):
         super(GCNBlock,self).__init__()
         self.add_self = add_self
         self.dropout = dropout
         self.relu=relu
-        self.bn=bn
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
-        if self.bn:
-            self.bn_layer = masked_batchnorm(output_dim)
-
         self.normalize_embedding = normalize_embedding
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -228,10 +221,12 @@ class GCNBlock(nn.Module):
         else:
             self.bias = None
 
-    def forward(self, x, adj, mask):
+    def forward(self, x, adj):
         if self.dropout > 0.001:
             x = self.dropout_layer(x)
         y = torch.matmul(adj, x)
+        if self.relu:
+            y=torch.nn.functional.relu(y)
         if self.add_self:
             y += x
         y = torch.matmul(y,self.weight)
@@ -239,31 +234,27 @@ class GCNBlock(nn.Module):
             y = y + self.bias
         if self.normalize_embedding:
             y = F.normalize(y, p=2, dim=2)
-        y = mask.unsqueeze(2)*y
-        if self.bn:
-            y=self.bn_layer(y,mask)
-        if self.relu:
-            y=torch.nn.functional.relu(y)
         return y
 
-class masked_batchnorm(nn.Module):
-    def __init__(self,feat_dim,epsilon=1e-10):
-        super().__init__()
-        self.alpha=nn.Parameter(torch.ones(feat_dim))
-        self.beta=nn.Parameter(torch.zeros(feat_dim))
-        self.eps=epsilon
-
-    def forward(self,x,mask):
-        '''
-        x: node feat, [batch,node_num,feat_dim]
-        mask: [batch,node_num]
-        '''
-        mask1 = mask.unsqueeze(2)
-        mask_sum = mask.sum()
-        mean = x.sum(dim=(0,1),keepdim=True)/(self.eps+mask_sum)
-        temp = (x - mean)**2
-        temp = temp*mask1
-        var = temp.sum(dim=(0,1),keepdim=True)/(self.eps+mask_sum)
-        rstd = torch.rsqrt(var+self.eps)
-        x=(x-mean)*rstd
-        return ((x*self.alpha) + self.beta)*mask1
+#class masked_batchnorm(nn.Module):
+#    def __init__(self,dim,epsilon=1e-10):
+#        super(layernorm,self).__init__()
+#        self.alpha=nn.Parameter(torch.ones(num_units))
+#        self.beta=nn.Parameter(torch.zeros(num_units))
+#        self.base=base
+#        self.num_units=num_units
+#        self.epsilon=epsilon
+#
+#    def forward(self,x,mask):
+#        '''
+#        x: node feat, [batch,node_num,feat_dim]
+#        mask: [batch,node_num]
+#        '''
+#        h_reshape=x.view([-1,self.base,self.num_units])
+#        mean = h_reshape.mean(dim = 2,keepdim=True)
+#        temp = (h_reshape - mean)**2
+#        var = temp.mean(dim = 2,keepdim=True)
+#        rstd = torch.rsqrt(var+self.epsilon)
+#        h_reshape=(h_reshape-mean)*rstd
+#        h = h_reshape.view([-1, self.base * self.num_units])
+#        return (h*self.alpha) + self.beta

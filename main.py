@@ -66,7 +66,7 @@ class Classifier(nn.Module):
             self.gcns=nn.ModuleList()
             x_size=args.input_dim
             for _ in range(self.num_layers):
-                self.gcns.append(GCNBlock(x_size,args.hidden_dim,args.gcn_res,args.gcn_norm,args.dropout,args.relu))
+                self.gcns.append(GCNBlock(x_size,args.hidden_dim,args.bn,args.gcn_res,args.gcn_norm,args.dropout,args.relu))
                 x_size=args.hidden_dim
             self.mlp=MLPClassifier(args.hidden_dim,args.mlp_hidden,args.num_class,args.mlp_layers,args.dropout)
 
@@ -179,7 +179,7 @@ class Classifier(nn.Module):
     def gcn_forward(self,node_feat,labels,adj,mask):
         X=node_feat
         for i in range(self.num_layers):
-            X=self.gcns[i](X,adj)
+            X=self.gcns[i](X,adj,mask)
         embed=self.pool(X,mask)
         logits,_,loss,acc=self.mlp(embed,labels)
         return logits,loss,acc,acc,None
@@ -351,7 +351,7 @@ def main():
             f.write(str(test_loss[-1]) + '\n')
 
     with open(os.path.join(args.logdir,'acc_results.txt'), 'a+') as f:
-        f.write(pname+': '+'%.4f(%d) %.4f(%d)'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))
+        f.writelines(pname+': '+'%.4f(%d) %.4f(%d)'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))
         
 
 if __name__ == '__main__':

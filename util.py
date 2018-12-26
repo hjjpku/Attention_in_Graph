@@ -47,7 +47,9 @@ cls_opt.add_argument('-eps', type=float, default=1e-20, help='')
 gcn_opt=cmd_opt.add_argument_group('gcn options')
 gcn_opt.add_argument('-gcn_res', type=int, default=0, help='whether to use residual structure in gcn layers')
 gcn_opt.add_argument('-gcn_norm', type=int, default=0, help='whether to normalize gcn layers')
+gcn_opt.add_argument('-bn', type=int, default=0, help='whether to normalize gcn layers')
 gcn_opt.add_argument('-relu', type=int, default=1, help='whether to use relu')
+gcn_opt.add_argument('-lastrelu', type=int, default=1, help='whether to use relu')
 gcn_opt.add_argument('-gcn_layers', type=int, default=6, help='layer number in each agcn block')
 
 gcn_opt.add_argument('-att_norm', type=int, default=0, help='layer number in each agcn block')
@@ -59,12 +61,18 @@ agcn_opt.add_argument('-pool', type=str,default='mean',help='agcn pool method: m
 agcn_opt.add_argument('-softmax', type=str,default='global',help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-khop', type=int,default=1,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-adj_norm', type=str,default='none',help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-dnorm', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in rank loss')
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 
+esm_opt=cmd_opt.add_argument_group('ensembler options')
+esm_opt.add_argument('-esm_hidden', type=int, default=128, help='hidden size of mlp layers')
+esm_opt.add_argument('-esm_lr', type=float, default=1e-4, help='init learning_rate')
+esm_opt.add_argument('-esm_drop', type=float, default=0.5, help='')
+esm_opt.add_argument('-esm_indrop', type=int, default=1, help='')
 
 cmd_args = cmd_opt.parse_args()
 
@@ -224,10 +232,11 @@ def create_process_name():
     has_model=0
     has_data=0
     for x in argvs:
-        if ('save' in x) or ('log' in x) or ('dir' in x) or ('gpu' in x) or ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
+        if ('esm' in x) or ('print' in x) or ('save' in x) or ('log' in x) or ('dir' in x) or ('gpu' in x) or ('-model=' in x) or ('-data=' in x) or ('-init_from' in x):
             continue
         n,v=x.strip('-').split('=')
         tmp.append(n+'^'+v)
     name='_'.join(tmp)
     name='_'.join([cmd_args.model,name,cmd_args.data])
     return name
+
