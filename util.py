@@ -63,10 +63,12 @@ agcn_opt.add_argument('-khop', type=int,default=1,help='agcn pool method: global
 agcn_opt.add_argument('-adj_norm', type=str,default='none',help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-dnorm', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-single_loss', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in rank loss')
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-agcn_res', type=int,default=0,help='agcn node keep percent(=k/node_num)')
 
 esm_opt=cmd_opt.add_argument_group('ensembler options')
 esm_opt.add_argument('-esm_hidden', type=int, default=128, help='hidden size of mlp layers')

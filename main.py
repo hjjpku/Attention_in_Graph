@@ -72,6 +72,8 @@ class Classifier(nn.Module):
 
         elif self.model=='agcn':
             self.margin=args.margin
+            self.agcn_res=args.agcn_res
+            self.single_loss=args.single_loss
             self.num_layers=args.num_layers
             assert args.gcn_layers%self.num_layers==0
             args.gcn_layers=args.gcn_layers//self.num_layers
@@ -193,13 +195,18 @@ class Classifier(nn.Module):
         p_t=[]
         pred_logits=0
         visualize_tools=[]
+        embeds=0
 
         for i in range(self.num_layers):
             embed,X,adj,mask,visualize_tool=self.agcns[i](X,adj,mask,is_print=is_print)
+            embeds=embeds+embed
 
             visualize_tools.append(visualize_tool)
 
-            logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
+            if not self.agcn_res:
+                logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
+            else:
+                logits,softmax_logits,loss,acc=self.mlps[i](embeds,labels)
 
             '''
             cls_loss=loss
@@ -227,6 +234,9 @@ class Classifier(nn.Module):
             print('cls_loss:',cls_loss)
             print('rank_loss:',rank_loss)
         
+        if self.single_loss:
+            cls_loss=cls_loss[-1]
+            avg_acc=acc
         if self.rank_loss:
             loss=cls_loss.mean()+rank_loss.mean()
         else:
