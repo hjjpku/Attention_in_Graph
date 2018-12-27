@@ -56,7 +56,6 @@ gcn_opt.add_argument('-att_norm', type=int, default=0, help='layer number in eac
 
 #agcn options:
 agcn_opt=cmd_opt.add_argument_group('agcn options')
-agcn_opt.add_argument('-feat_mode', type=str,default='trans', help='whether to normalize gcn layers: a)raw:output raw feature b)trans:output gcn feature c)concat:output concatenation of raw and gcn feature ')
 agcn_opt.add_argument('-pool', type=str,default='mean',help='agcn pool method: mean/max')
 agcn_opt.add_argument('-softmax', type=str,default='global',help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-khop', type=int,default=1,help='agcn pool method: global/neighbor')
@@ -69,6 +68,7 @@ agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep pe
 agcn_opt.add_argument('-tau', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-agcn_res', type=int,default=0,help='agcn node keep percent(=k/node_num)')
+agcn_opt.add_argument('-pool_layers', type=int,default=2,help='agcn node keep percent(=k/node_num)')
 
 esm_opt=cmd_opt.add_argument_group('ensembler options')
 esm_opt.add_argument('-esm_hidden', type=int, default=128, help='hidden size of mlp layers')

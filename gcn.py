@@ -13,13 +13,19 @@ class AGCNBlock(nn.Module):
         super(AGCNBlock,self).__init__()
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
+        self.model=config.model
         self.gcns=nn.ModuleList()
         self.gcns.append(GCNBlock(input_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
+
         for i in range(gcn_layer-1):
             if i==gcn_layer-2 and (not config.lastrelu):
                 self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,0))
             else:
                 self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
+
+        if self.model=='diffpool':
+            self.pool_gcns=nn.ModuleList()
+            
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
@@ -29,15 +35,8 @@ class AGCNBlock(nn.Module):
         '''
         torch.nn.init.uniform_(self.w_b,-1,1)
 
-        self.feat_mode=config.feat_mode
-        if self.feat_mode=='raw':
-            self.pass_dim=input_dim
-        elif self.feat_mode=='trans':
-            self.pass_dim=hidden_dim
-        elif self.feat_mode=='concat':
-            self.pass_dim=input_dim+hidden_dim
-        else:
-            raise Exception('unknown pass feature mode!')
+        self.pass_dim=hidden_dim
+
         if config.pool=='mean':
             self.pool=self.mean_pool
         elif config.pool=='max':
@@ -84,46 +83,46 @@ class AGCNBlock(nn.Module):
         hidden=mask.unsqueeze(2)*hidden
         out=self.pool(hidden,mask)
         
-        att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
-        att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
-        att_b_max,_=att_b.max(dim=1,keepdim=True)
-        att_b=torch.exp((att_b-att_b_max)*self.tau)
-        if self.softmax=='neibor' or self.softmax=='mix':
-            denom=att_b.unsqueeze(2)
-            for _ in range(self.khop):
-                denom=torch.matmul(adj,denom)
-            denom=denom.squeeze()+self.eps
-            att_b=att_b/denom
-            if self.dnorm:
-                att_b=att_b/(torch.diagonal(adj,0,1,2)+self.eps)
-            
-        elif self.softmax=='hardnei':
-            denom=adj
-            for _ in range(self.khop-1):
-                denom=torch.matmul(adj,denom)
-            denom=(denom>0).type_as(att_b)
-            denom=torch.matmul(denom,att_b.unsqueeze(2)).squeeze()+self.eps
-            att_b=att_b/denom
-
-        if self.softmax=='global':
-            att=torch.nn.functional.softmax(att_a,dim=1)
-        elif self.softmax=='neibor' or self.softmax=='hardnei':
-            att=att_b
-        elif self.softmax=='mix':
-            att=torch.nn.functional.softmax(att_a,dim=1)+att_b*self.lamda
-        elif self.softmax=='gcn':
-            att=torch.stack([att_a,att_b],dim=2)
-            if self.att_norm:
-                att=torch.nn.functional.normalize(att,dim=1)
-            att=self.att_gcn(att,adj)
-            att=torch.nn.functional.softmax(att.squeeze(2),dim=1)
+        if self.model=='unet':
+            att=torch.matmul(hidden,self.w_a).squeeze()
+            att=att/torch.sqrt((self.w_a.squeeze(2)**2).sum(dim=1,keepdim=True))
+        else:
+            att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
+            att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
+            att_b_max,_=att_b.max(dim=1,keepdim=True)
+            att_b=torch.exp((att_b-att_b_max)*self.tau)
+            if self.softmax=='neibor' or self.softmax=='mix':
+                denom=att_b.unsqueeze(2)
+                for _ in range(self.khop):
+                    denom=torch.matmul(adj,denom)
+                denom=denom.squeeze()+self.eps
+                att_b=att_b/denom
+                if self.dnorm:
+                    att_b=att_b/(torch.diagonal(adj,0,1,2)+self.eps)
                 
-        if self.feat_mode=='raw':
-            Z=X
-        elif self.feat_mode=='trans':
-            Z=hidden
-        elif self.feat_mode=='concat':
-            Z=torch.cat([X,hidden],dim=2)
+            elif self.softmax=='hardnei':
+                denom=adj
+                for _ in range(self.khop-1):
+                    denom=torch.matmul(adj,denom)
+                denom=(denom>0).type_as(att_b)
+                denom=torch.matmul(denom,att_b.unsqueeze(2)).squeeze()+self.eps
+                att_b=att_b/denom
+
+            if self.softmax=='global':
+                att=torch.nn.functional.softmax(att_a,dim=1)
+            elif self.softmax=='neibor' or self.softmax=='hardnei':
+                att=att_b
+            elif self.softmax=='mix':
+                att=torch.nn.functional.softmax(att_a,dim=1)+att_b*self.lamda
+            elif self.softmax=='gcn':
+                att=torch.stack([att_a,att_b],dim=2)
+                if self.att_norm:
+                    att=torch.nn.functional.normalize(att,dim=1)
+                att=self.att_gcn(att,adj)
+                att=torch.nn.functional.softmax(att.squeeze(2),dim=1)
+                
+        Z=hidden
+
         Z=att.unsqueeze(2)*Z
         
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
@@ -131,20 +130,42 @@ class AGCNBlock(nn.Module):
         
         _,top_index=torch.topk(att,k_max,dim=1)
         new_mask=X.new_zeros(X.shape[0],k_max)
-        assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
-        for i,k in enumerate(k_list):
-            for j in range(int(k)):
-                '''
-                print(i,j)
-                print(assign_m.shape,adj.shape,top_index.shape)
-                print(assign_m[i][j],top_index[i][j])
-                '''
-                assign_m[i][j]=adj[i][top_index[i][j]]
-                new_mask[i][j]=1.
-        assign_m=assign_m/(assign_m.sum(dim=1,keepdim=True)+self.eps)
-        
-        new_adj=torch.matmul(torch.matmul(assign_m,adj),torch.transpose(assign_m,1,2))
-        
+
+        visualize_tools=None 
+
+        if self.model=='unet':
+            for i,k in enumerate(k_list):
+                for j in range(int(k),k_max):
+                    top_index[i][j]=adj.shape[-1]-1
+                    new_mask[i][j]=-1.
+            new_mask=new_mask+1
+            top_index,_=torch.sort(top_index,dim=1)
+            assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
+            for i,x in enumerate(top_index):
+                assign_m[i]=torch.index_select(adj[i],1,x)
+            new_adj=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
+            H=Z.new_zeros(Z.shape[0],k_max,Z.shape[-1])
+            for i,x in enumerate(top_index):
+                new_adj[i]=torch.index_select(assign_m[i],2,x)
+                H[i]=torch.index_select(Z[i],1,x)
+
+        elif self.model=='agcn':
+            assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
+            for i,k in enumerate(k_list):
+                for j in range(int(k)):
+                    '''
+                    print(i,j)
+                    print(assign_m.shape,adj.shape,top_index.shape)
+                    print(assign_m[i][j],top_index[i][j])
+                    '''
+                    assign_m[i][j]=adj[i][top_index[i][j]]
+                    new_mask[i][j]=1.
+            assign_m=assign_m/(assign_m.sum(dim=1,keepdim=True)+self.eps)
+
+            H=torch.matmul(assign_m,Z)
+            
+            new_adj=torch.matmul(torch.matmul(assign_m,adj),torch.transpose(assign_m,1,2))
+            
         if self.adj_norm=='tanh' or self.adj_norm=='mix':
             new_adj=torch.tanh(new_adj)
         elif self.adj_norm=='diag' or self.adj_norm=='mix':
@@ -153,6 +174,7 @@ class AGCNBlock(nn.Module):
             for i,x in enumerate(diag_elem):
                 diag[i]=torch.diagflat(x)
             new_adj=torch.matmul(torch.matmul(diag,new_adj),diag)
+
 
         visualize_tools=[]
         if (not self.training) and is_print:
@@ -190,9 +212,6 @@ class AGCNBlock(nn.Module):
             print(new_mask)
             visualize_tools.append(new_mask.sum())
             
-
-        H=torch.matmul(assign_m,Z)
-
         return out,H,new_adj,new_mask,visualize_tools
     
     def mean_pool(self,x,mask):
