@@ -142,12 +142,12 @@ class AGCNBlock(nn.Module):
             top_index,_=torch.sort(top_index,dim=1)
             assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
             for i,x in enumerate(top_index):
-                assign_m[i]=torch.index_select(adj[i],1,x)
-            new_adj=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
+                assign_m[i]=torch.index_select(adj[i],0,x)
+            new_adj=X.new_zeros(X.shape[0],k_max,k_max)
             H=Z.new_zeros(Z.shape[0],k_max,Z.shape[-1])
             for i,x in enumerate(top_index):
-                new_adj[i]=torch.index_select(assign_m[i],2,x)
-                H[i]=torch.index_select(Z[i],1,x)
+                new_adj[i]=torch.index_select(assign_m[i],1,x)
+                H[i]=torch.index_select(Z[i],0,x)
 
         elif self.model=='agcn':
             assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])

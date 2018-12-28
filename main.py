@@ -70,7 +70,7 @@ class Classifier(nn.Module):
                 x_size=args.hidden_dim
             self.mlp=MLPClassifier(args.hidden_dim,args.mlp_hidden,args.num_class,args.mlp_layers,args.dropout)
 
-        elif self.model=='agcn':
+        else:
             self.margin=args.margin
             self.agcn_res=args.agcn_res
             self.single_loss=args.single_loss
@@ -165,7 +165,7 @@ class Classifier(nn.Module):
 #        print('mask:',labels.type(),mask.shape,mask)
         if self.model=='gcn':
             return self.gcn_forward(node_feat,labels,adj,mask)
-        elif self.model=='agcn':
+        else:
             return self.agcn_forward(node_feat,labels,adj,mask,is_print=is_print)
 
     def mean_pool(self,x,mask):
@@ -261,13 +261,13 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         targets = [g_list[idx].label for idx in selected_idx]
         all_targets += targets
 
-        if (not classifier.training) and (pos in visual_pos) and args.model=='agcn':
+        if (not classifier.training) and (pos in visual_pos) and args.model!='gcn':
             print('=======================test minibatch:',pos,'==================================')
 
         logits, loss, acc,avg_acc,visualize_tools = classifier(batch_graph,is_print=(pos in visual_pos))
         all_scores.append(logits[:, 1].detach())  # for binary classification
 
-        if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model=='agcn':
+        if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model!='gcn':
             visualize_tools=list(zip(*visualize_tools))
             visualize_tools=[[x.detach().cpu().numpy() for x in y] for y in visualize_tools]
             np.save(os.path.join(save_path,'sample%03d_epoch%03d.npy'%(pos,epoch)),[batch_graph[0].g,batch_graph[0].node_tags]+visualize_tools)
