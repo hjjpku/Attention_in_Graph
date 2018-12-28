@@ -123,7 +123,10 @@ class AGCNBlock(nn.Module):
                 
         Z=hidden
 
-        Z=att.unsqueeze(2)*Z
+        if self.model=='unet':
+            Z=torch.tanh(att.unsqueeze(2))*Z
+        elif self.model=='agcn':
+            Z=att.unsqueeze(2)*Z
         
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
         k_list=[int(math.ceil(self.filt_percent*x)) for x in mask.sum(dim=1).tolist()]
