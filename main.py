@@ -28,6 +28,11 @@ from embedding import EmbedMeanField, EmbedLoopyBP
 
 from util import cmd_args, load_data,create_process_name
 args=cmd_args
+if args.init_from!='':
+    tmp=args.init_from
+    state_dict=torch.load(args.init_from)
+    args=state_dict['args']
+    args.init_from=tmp
 
 pname=create_process_name()
 setproctitle(pname)
@@ -323,9 +328,17 @@ def main():
     best_acc=float('-inf')
     best_avg_acc=float('-inf')
     best_overall_acc=float('-inf')
+    start_epoch=0
     best_epoch=0
     best_avg_epoch=0
-    for epoch in range(args.epochs):
+
+    if args.init_from!='':
+        classifier.load_state_dict(state_dict['model_state_dict'])
+        optimizer.load_state_dict(state_dict['optim_state_dict'])
+        start_epoch=state_dict['epoch']
+        best_overall_acc=state_dict['best_overall_acc']
+        
+    for epoch in range(start_epoch,args.epochs):
         start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
@@ -346,7 +359,12 @@ def main():
             best_avg_epoch=epoch
         if max(best_acc,best_avg_acc)>best_overall_acc:
             best_overall_acc=max(best_acc,best_avg_acc)
-            torch.save(classifier.state_dict(),os.path.join(save_path,'best_model.pth'))
+            torch.save({'model_state_dict':classifier.state_dict(),
+                'optim_state_dict':optimizer.state_dict(),
+                'args':args,
+                'epoch':epoch,
+                'best_overall_acc':best_overall_acc},
+                os.path.join(save_path,'best_model.pth'))
 
         if not args.printAUC:
             test_loss[3] = 0.0
