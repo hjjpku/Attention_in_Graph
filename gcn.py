@@ -100,7 +100,10 @@ class AGCNBlock(nn.Module):
                 denom=denom.squeeze()+self.eps
                 att_b=att_b/denom
                 if self.dnorm:
-                    att_b=att_b/(torch.diagonal(adj,0,1,2)+self.eps)
+                    diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)
+                    diag_scale_max,_=diag_scale.max(dim=1,keepdim=True)
+                    diag_scale=diag_scale/diag_scale_max
+                    att_b=att_b*diag_scale
                 
             elif self.softmax=='hardnei':
                 denom=adj
@@ -164,11 +167,6 @@ class AGCNBlock(nn.Module):
             assign_m=X.new_zeros(X.shape[0],k_max,adj.shape[-1])
             for i,k in enumerate(k_list):
                 for j in range(int(k)):
-                    '''
-                    print(i,j)
-                    print(assign_m.shape,adj.shape,top_index.shape)
-                    print(assign_m[i][j],top_index[i][j])
-                    '''
                     assign_m[i][j]=adj[i][top_index[i][j]]
                     new_mask[i][j]=1.
             assign_m=assign_m/(assign_m.sum(dim=1,keepdim=True)+self.eps)
@@ -210,7 +208,7 @@ class AGCNBlock(nn.Module):
 
         visualize_tools=[]
         if (not self.training) and is_print:
-           
+
             print('**********************************')
             print('node_feat:',X.type(),X.shape)
             print(X)
