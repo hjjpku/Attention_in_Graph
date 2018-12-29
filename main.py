@@ -87,6 +87,8 @@ class Classifier(nn.Module):
             for _ in range(args.num_layers):
                 self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,args.gcn_layers,args.dropout,args.relu))
                 x_size=self.agcns[-1].pass_dim
+                if args.model=='diffpool':
+                    args.diffpool_k=int(math.ceil(args.diffpool_k*args.percent))
             self.mlps=nn.ModuleList()
             for _ in range(args.num_layers):
                 self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
@@ -337,8 +339,13 @@ def main():
         optimizer.load_state_dict(state_dict['optim_state_dict'])
         start_epoch=state_dict['epoch']
         best_overall_acc=state_dict['best_overall_acc']
+
+        dummy_idxes=list(range(len(train_graphs)))
+        for _ in range(start_epoch):
+            random.shuffle(dummy_idxes)
+            
         
-    for epoch in range(start_epoch,args.epochs):
+    for epoch in range(start_epoch+1,args.epochs):
         start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
@@ -369,7 +376,7 @@ def main():
         if not args.printAUC:
             test_loss[3] = 0.0
         print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d) time:%.0fs' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch,time.time()-start_time))
-        if args.model=='agcn' and args.tau==-1.:
+        if args.model=='agcn' and args.tau!=-1.:
             for k in range(classifier.num_layers):
                 print('layer%d: tau=%.5f, lamda=%.5f'%(k,classifier.agcns[k].tau.item(),classifier.agcns[k].lamda.item()))
 

@@ -22,17 +22,18 @@ class AGCNBlock(nn.Module):
                 self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,0))
             else:
                 self.gcns.append(GCNBlock(hidden_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
-
+            
         if self.model=='diffpool':
             self.pool_gcns=nn.ModuleList()
-            
+            tmp=input_dim
+            self.diffpool_k=config.diffpool_k
+            for i in range(config.pool_layers):
+                self.pool_gcns.append(GCNBlock(tmp,config.diffpool_k,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
+                tmp=config.diffpool_k
 
         self.w_a=nn.Parameter(torch.zeros(1,hidden_dim,1))
         self.w_b=nn.Parameter(torch.zeros(1,hidden_dim,1))
         torch.nn.init.normal_(self.w_a)
-        '''
-        torch.nn.init.uniform_(self.w_a,-1,1)
-        '''
         torch.nn.init.uniform_(self.w_b,-1,1)
 
         self.pass_dim=hidden_dim
@@ -86,7 +87,7 @@ class AGCNBlock(nn.Module):
         if self.model=='unet':
             att=torch.matmul(hidden,self.w_a).squeeze()
             att=att/torch.sqrt((self.w_a.squeeze(2)**2).sum(dim=1,keepdim=True))
-        else:
+        elif self.model=='agcn':
             att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
             att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
             att_b_max,_=att_b.max(dim=1,keepdim=True)
@@ -129,9 +130,14 @@ class AGCNBlock(nn.Module):
             Z=att.unsqueeze(2)*Z
         
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
+        if self.model=='diffpool':
+            k_max=min(k_max,self.diffpool_k)
+
         k_list=[int(math.ceil(self.filt_percent*x)) for x in mask.sum(dim=1).tolist()]
-        
-        _,top_index=torch.topk(att,k_max,dim=1)
+
+        if self.model!='diffpool':
+            _,top_index=torch.topk(att,k_max,dim=1)
+
         new_mask=X.new_zeros(X.shape[0],k_max)
 
         visualize_tools=None 
@@ -168,6 +174,23 @@ class AGCNBlock(nn.Module):
             H=torch.matmul(assign_m,Z)
             
             new_adj=torch.matmul(torch.matmul(assign_m,adj),torch.transpose(assign_m,1,2))
+
+        elif self.model=='diffpool':
+            hidden1=X
+            for gcn in self.pool_gcns:
+                hidden1=gcn(hidden1,adj,mask)
+            assign_m=X.new_ones(X.shape[0],X.shape[1],k_max)*(-100000000.)
+            for i,x in enumerate(hidden1):
+                k=min(k_list[i],k_max)
+                assign_m[i,:,0:k]=hidden1[i,:,0:k]
+                for j in range(int(k)):
+                    new_mask[i][j]=1.
+
+            assign_m=torch.nn.functional.softmax(assign_m,dim=2)*mask.unsqueeze(2)
+            assign_m_t=torch.transpose(assign_m,1,2)
+            new_adj=torch.matmul(torch.matmul(assign_m_t,adj),assign_m)
+            H=torch.matmul(assign_m_t,Z)
+            
             
         if self.adj_norm=='tanh' or self.adj_norm=='mix':
             new_adj=torch.tanh(new_adj)
@@ -186,15 +209,16 @@ class AGCNBlock(nn.Module):
             print('node_feat:',X.type(),X.shape)
             print(X)
 
-            print('**********************************')
-            print('att:',att.type(),att.shape)
-            print(att)
-            visualize_tools.append(att[0])
+            if self.model!='diffpool':
+                print('**********************************')
+                print('att:',att.type(),att.shape)
+                print(att)
+                visualize_tools.append(att[0])
 
-            print('**********************************')
-            print('top_index:',top_index.type(),top_index.shape)
-            print(top_index)
-            visualize_tools.append(top_index[0])
+                print('**********************************')
+                print('top_index:',top_index.type(),top_index.shape)
+                print(top_index)
+                visualize_tools.append(top_index[0])
 
 
             print('**********************************')
