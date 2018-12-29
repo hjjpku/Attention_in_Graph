@@ -61,6 +61,8 @@ class AGCNBlock(nn.Module):
         
         self.dnorm=config.dnorm
 
+        self.att_out=config.att_out
+
     def forward(self,X,adj,mask,is_print=False):
         '''
     input:
@@ -82,7 +84,6 @@ class AGCNBlock(nn.Module):
             hidden=gcn(hidden,adj,mask)
         
         hidden=mask.unsqueeze(2)*hidden
-        out=self.pool(hidden,mask)
         
         if self.model=='unet':
             att=torch.matmul(hidden,self.w_a).squeeze()
@@ -129,6 +130,7 @@ class AGCNBlock(nn.Module):
         elif self.model=='agcn':
             Z=att.unsqueeze(2)*Z
         
+
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
         if self.model=='diffpool':
             k_max=min(k_max,self.diffpool_k)
@@ -191,6 +193,10 @@ class AGCNBlock(nn.Module):
             new_adj=torch.matmul(torch.matmul(assign_m_t,adj),assign_m)
             H=torch.matmul(assign_m_t,Z)
             
+        if self.att_out:
+            out=self.pool(H,new_mask)
+        else:
+            out=self.pool(hidden,mask)
             
         if self.adj_norm=='tanh' or self.adj_norm=='mix':
             new_adj=torch.tanh(new_adj)
