@@ -60,6 +60,7 @@ class AGCNBlock(nn.Module):
         self.att_norm=config.att_norm
         
         self.dnorm=config.dnorm
+        self.dnorm_coe=config.dnorm_coe
 
         self.att_out=config.att_out
 
@@ -100,9 +101,7 @@ class AGCNBlock(nn.Module):
                 denom=denom.squeeze()+self.eps
                 att_b=att_b/denom
                 if self.dnorm:
-                    diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)
-                    diag_scale_max,_=diag_scale.max(dim=1,keepdim=True)
-                    diag_scale=diag_scale/diag_scale_max
+                    diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)/self.dnorm_coe
                     att_b=att_b*diag_scale
                 
             elif self.softmax=='hardnei':

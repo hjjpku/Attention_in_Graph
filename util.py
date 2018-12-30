@@ -62,6 +62,7 @@ agcn_opt.add_argument('-softmax', type=str,default='global',help='agcn pool meth
 agcn_opt.add_argument('-khop', type=int,default=1,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-adj_norm', type=str,default='none',help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-dnorm', type=int,default=0,help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-dnorm_coe', type=float,default=10.,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-att_out', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-single_loss', type=int,default=0,help='agcn pool method: global/neighbor')
