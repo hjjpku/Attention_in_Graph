@@ -283,6 +283,8 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         if optimizer is not None:
             optimizer.zero_grad()
             loss.backward()
+            if args.clip:
+                torch.nn.utils.clip_grad_norm_(classifier.parameters(),args.max_grad_norm)
             optimizer.step()
 
         loss = loss.data.cpu().numpy()

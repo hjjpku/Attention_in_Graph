@@ -51,8 +51,14 @@ class AGCNBlock(nn.Module):
 
         self.filt_percent=config.percent
         self.eps=config.eps
+
+        self.tau_config=config.tau
         if config.tau==-1.:
             self.tau=nn.Parameter(torch.tensor(1),requires_grad=False)
+        elif config.tau==-2.:
+            self.tau_fc=nn.Linear(hidden_dim,1)
+            torch.nn.init.constant_(self.tau_fc.bias,1)
+            torch.nn.init.xavier_normal_(self.tau_fc.weight.t())
         else:
             self.tau=nn.Parameter(torch.tensor(config.tau))
         self.lamda=nn.Parameter(torch.tensor(config.lamda))
@@ -93,7 +99,10 @@ class AGCNBlock(nn.Module):
             att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
             att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
             att_b_max,_=att_b.max(dim=1,keepdim=True)
-            att_b=torch.exp((att_b-att_b_max)*self.tau)
+            if self.tau_config!=-2:
+                att_b=torch.exp((att_b-att_b_max)*torch.abs(self.tau))
+            else:
+                att_b=torch.exp((att_b-att_b_max)*torch.abs(self.tau_fc(self.pool(hidden,mask))))
             if self.softmax=='neibor' or self.softmax=='mix':
                 denom=att_b.unsqueeze(2)
                 for _ in range(self.khop):
