@@ -347,7 +347,18 @@ def main():
             random.shuffle(dummy_idxes)
             
         
+    p=0
     for epoch in range(start_epoch+1,args.epochs):
+        if args.decay==1 and epoch==args.epochs-args.patient:
+            for pg in optimizer.param_groups:
+                tmp=pg['lr']=pg['lr']*0.1
+            print('===>>lr decay to %f'%tmp)
+        if args.decay==2 and p>=args.patient:
+            for pg in optimizer.param_groups:
+                tmp=pg['lr']=pg['lr']*0.1
+            print('===>>lr decay to %f'%tmp)
+            p=0
+
         start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
@@ -366,6 +377,9 @@ def main():
         if best_avg_acc<test_loss[2]:
             best_avg_acc=test_loss[2]
             best_avg_epoch=epoch
+            p=0
+        else:
+            p+=1
         if max(best_acc,best_avg_acc)>best_overall_acc:
             best_overall_acc=max(best_acc,best_avg_acc)
             torch.save({'model_state_dict':classifier.state_dict(),
