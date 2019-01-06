@@ -200,7 +200,7 @@ class AGCNBlock(nn.Module):
             H=torch.matmul(assign_m_t,Z)
             
         if self.att_out:
-            out=self.pool(H,new_mask)
+            out=self.pool(Z,mask)
         else:
             out=self.pool(hidden,mask)
             
