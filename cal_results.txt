@@ -1,0 +1,4 @@
+agcn_softmax^global_adj_norm^diag_DD:  acc=0.7974 avg_acc=0.8103
+10 folds: fold^10,fold^1,fold^2,fold^3,fold^4,fold^5,fold^6,fold^7,fold^8,fold^9
+agcn_softmax^global_adj_norm^none_DD:  acc=0.8000 avg_acc=0.8103
+10 folds: fold^10,fold^1,fold^2,fold^3,fold^4,fold^5,fold^6,fold^7,fold^8,fold^9
