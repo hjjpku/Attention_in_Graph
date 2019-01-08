@@ -394,7 +394,7 @@ def main():
         print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d) time:%.0fs' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch,time.time()-start_time))
         if args.model=='agcn' and args.tau>0:
             for k in range(classifier.num_layers):
-                print('layer%d: tau=%.5f, lamda=%.5f'%(k,classifier.agcns[k].tau.item(),classifier.agcns[k].lamda.item()))
+                print('layer%d: tau=%.5f, lamda1=%.5f lamda2=%.5f'%(k,classifier.agcns[k].tau.item(),classifier.agcns[k].lamda1.item(),classifier.agcns[k].lamda2.item()))
 
 
     if args.printAUC:

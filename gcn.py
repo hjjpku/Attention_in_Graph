@@ -61,7 +61,8 @@ class AGCNBlock(nn.Module):
             torch.nn.init.xavier_normal_(self.tau_fc.weight.t())
         else:
             self.tau=nn.Parameter(torch.tensor(config.tau))
-        self.lamda=nn.Parameter(torch.tensor(config.lamda))
+        self.lamda1=nn.Parameter(torch.tensor(config.lamda))
+        self.lamda2=nn.Parameter(torch.tensor(config.lamda))
 
         self.att_norm=config.att_norm
         
@@ -97,6 +98,10 @@ class AGCNBlock(nn.Module):
             att=att/torch.sqrt((self.w_a.squeeze(2)**2).sum(dim=1,keepdim=True))
         elif self.model=='agcn':
             att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
+            att_a=torch.nn.functional.softmax(att_a,dim=1)
+            if self.dnorm:
+                scale=mask.sum(dim=1,keepdim=True)/self.dnorm_coe
+                att_a=scale*att_a
             att_b=torch.matmul(hidden,self.w_b).squeeze()+(mask-1)*1e10
             att_b_max,_=att_b.max(dim=1,keepdim=True)
             if self.tau_config!=-2:
@@ -122,11 +127,11 @@ class AGCNBlock(nn.Module):
                 att_b=att_b/denom
 
             if self.softmax=='global':
-                att=torch.nn.functional.softmax(att_a,dim=1)
+                att=att_a
             elif self.softmax=='neibor' or self.softmax=='hardnei':
                 att=att_b
             elif self.softmax=='mix':
-                att=torch.nn.functional.softmax(att_a,dim=1)+att_b*self.lamda
+                att=att_a*self.lamda1+att_b*self.lamda2
             elif self.softmax=='gcn':
                 att=torch.stack([att_a,att_b],dim=2)
                 if self.att_norm:
