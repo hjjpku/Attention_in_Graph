@@ -42,6 +42,8 @@ class AGCNBlock(nn.Module):
             self.pool=self.mean_pool
         elif config.pool=='max':
             self.pool=self.max_pool
+        elif config.pool=='sum':
+            self.pool=self.sum_pool
 
         self.softmax=config.softmax
         if self.softmax=='gcn':
@@ -70,6 +72,7 @@ class AGCNBlock(nn.Module):
         self.dnorm_coe=config.dnorm_coe
 
         self.att_out=config.att_out
+
 
     def forward(self,X,adj,mask,is_print=False):
         '''
@@ -262,6 +265,9 @@ class AGCNBlock(nn.Module):
     def mean_pool(self,x,mask):
         return x.sum(dim=1)/(self.eps+mask.sum(dim=1,keepdim=True))
     
+    def sum_pool(self,x,mask):
+        return x.sum(dim=1)
+
     @staticmethod
     def max_pool(x,mask):
         #output: [batch,x.shape[2]]
