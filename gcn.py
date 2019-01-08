@@ -102,7 +102,7 @@ class AGCNBlock(nn.Module):
         elif self.model=='agcn':
             if self.softmax=='global' or self.softmax=='mix':
                 att_a=torch.matmul(hidden,self.w_a).squeeze()+(mask-1)*1e10
-                att_a=torch.nn.functional.softmax(att_a,dim=1)
+                att_a_1=att_a=torch.nn.functional.softmax(att_a,dim=1)
                 if self.dnorm:
                     scale=mask.sum(dim=1,keepdim=True)/self.dnorm_coe
                     att_a=scale*att_a
@@ -209,7 +209,7 @@ class AGCNBlock(nn.Module):
             H=torch.matmul(assign_m_t,Z)
             
         if self.att_out:
-            out=self.pool(Z,mask)
+            out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
         else:
             out=self.pool(hidden,mask)
             
