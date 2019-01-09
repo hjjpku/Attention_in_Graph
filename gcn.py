@@ -149,7 +149,10 @@ class AGCNBlock(nn.Module):
         if self.model=='unet':
             Z=torch.tanh(att.unsqueeze(2))*Z
         elif self.model=='agcn':
-            Z=att.unsqueeze(2)*Z
+            if self.single_att:
+                Z=Z
+            else:
+                Z=att.unsqueeze(2)*Z
         
 
         k_max=int(math.ceil(self.filt_percent*adj.shape[-1]))
@@ -210,10 +213,7 @@ class AGCNBlock(nn.Module):
             H=torch.matmul(assign_m_t,Z)
             
         if self.att_out:
-            if self.single_att:
-                out=self.pool(hidden,mask)
-            else:
-                out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
+            out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
         else:
             out=self.pool(hidden,mask)
             
