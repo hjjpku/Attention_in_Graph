@@ -72,6 +72,7 @@ class AGCNBlock(nn.Module):
         self.dnorm_coe=config.dnorm_coe
 
         self.att_out=config.att_out
+        self.single_att=config.single_att
 
 
     def forward(self,X,adj,mask,is_print=False):
@@ -209,7 +210,10 @@ class AGCNBlock(nn.Module):
             H=torch.matmul(assign_m_t,Z)
             
         if self.att_out:
-            out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
+            if self.single_att:
+                out=self.pool(hidden,mask)
+            else:
+                out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
         else:
             out=self.pool(hidden,mask)
             

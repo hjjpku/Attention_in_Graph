@@ -69,6 +69,7 @@ agcn_opt.add_argument('-dnorm', type=int,default=0,help='agcn pool method: globa
 agcn_opt.add_argument('-dnorm_coe', type=float,default=1.,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-rank_loss', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-att_out', type=int,default=0,help='agcn pool method: global/neighbor')
+agcn_opt.add_argument('-single_att', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-single_loss', type=int,default=0,help='agcn pool method: global/neighbor')
 agcn_opt.add_argument('-margin', type=float, default=0.05, help='margin value in rank loss')
 agcn_opt.add_argument('-percent', type=float,default=0.5,help='agcn node keep percent(=k/node_num)')
