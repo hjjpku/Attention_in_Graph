@@ -89,8 +89,9 @@ class AGCNBlock(nn.Module):
         '''
         hidden=X
 
-        if adj.shape[-1]>50:
-            is_print=False
+        is_print1=is_print2=is_print
+        if adj.shape[-1]>100:
+            is_print1=False
 
         for gcn in self.gcns:
             hidden=gcn(hidden,adj,mask)
@@ -228,7 +229,7 @@ class AGCNBlock(nn.Module):
 
 
         visualize_tools=[]
-        if (not self.training) and is_print:
+        if (not self.training) and is_print1:
 
             print('**********************************')
             print('node_feat:',X.type(),X.shape)
@@ -238,12 +239,11 @@ class AGCNBlock(nn.Module):
                 print('**********************************')
                 print('att:',att.type(),att.shape)
                 print(att)
-                visualize_tools.append(att[0])
 
                 print('**********************************')
                 print('top_index:',top_index.type(),top_index.shape)
                 print(top_index)
-                visualize_tools.append(top_index[0])
+
 
 
             print('**********************************')
@@ -257,11 +257,16 @@ class AGCNBlock(nn.Module):
             print('**********************************')
             print('new_adj:',new_adj.type(),new_adj.shape)
             print(new_adj)
-            visualize_tools.append(new_adj[0])
 
             print('**********************************')
             print('new_mask:',new_mask.type(),new_mask.shape)
             print(new_mask)
+
+        if (not self.training) and is_print2:
+            if self.model!='diffpool':
+                visualize_tools.append(att[0])
+                visualize_tools.append(top_index[0])
+            visualize_tools.append(new_adj[0])
             visualize_tools.append(new_mask.sum())
             
         return out,H,new_adj,new_mask,visualize_tools
