@@ -1,6 +1,0 @@
-('agcn_softmax^global_adj_norm^diag_pool^sum_att_out^1_single_att^1_NCI1:', ' acc=0.8078 avg_acc=0.8255')
-('10 folds:', 'fold^10,fold^1,fold^2,fold^3,fold^4,fold^5,fold^6,fold^7,fold^8,fold^9')
-('agcn_softmax^global_adj_norm^diag_pool^sum_att_out^1_single_att^1_MUTAG:', ' acc=0.8833 avg_acc=0.8666')
-('10 folds:', 'fold^10,fold^1,fold^2,fold^3,fold^4,fold^5,fold^6,fold^7,fold^8,fold^9')
-('agcn_softmax^global_adj_norm^diag_pool^sum_att_out^1_single_att^1_PROTEINS:', ' acc=0.7919 avg_acc=0.7919')
-('10 folds:', 'fold^10,fold^1,fold^2,fold^3,fold^4,fold^5,fold^6,fold^7,fold^8,fold^9')
