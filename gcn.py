@@ -121,17 +121,14 @@ class AGCNBlock(nn.Module):
                 denom=denom.squeeze()+self.eps
                 att_b=att_b/denom
                 if self.dnorm:
-                    diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)/self.dnorm_coe
-                    att_b=att_b*diag_scale
+                    if self.softmax=='diag':
+                        diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)/self.dnorm_coe
+                        att_b=att_b*diag_scale
+                    elif self.softmax=='none':
+                        diag_scale=adj.sum(dim=1)
+                        att_b=att_b*diag_scale
+                        
                 
-            elif self.softmax=='hardnei':
-                denom=adj
-                for _ in range(self.khop-1):
-                    denom=torch.matmul(adj,denom)
-                denom=(denom>0).type_as(att_b)
-                denom=torch.matmul(denom,att_b.unsqueeze(2)).squeeze()+self.eps
-                att_b=att_b/denom
-
             if self.softmax=='global':
                 att=att_a
             elif self.softmax=='neibor' or self.softmax=='hardnei':
@@ -321,8 +318,10 @@ class GCNBlock(nn.Module):
         y = mask.unsqueeze(2)*y
         if self.bn:
             y=self.bn_layer(y,mask)
-        if self.relu:
+        if self.relu=='relu':
             y=torch.nn.functional.relu(y)
+        elif self.relu=='lrelu':
+            y=torch.nn.functional.leaky_relu(y,0.1)
         return y
 
 class masked_batchnorm(nn.Module):
