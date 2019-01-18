@@ -82,10 +82,19 @@ class Classifier(nn.Module):
             self.num_layers=args.num_layers
             assert args.gcn_layers%self.num_layers==0
             args.gcn_layers=args.gcn_layers//self.num_layers
+
+            self.num_layers=args.num_layers=4
+
             self.agcns=nn.ModuleList()
             x_size=args.input_dim
+
             for _ in range(args.num_layers):
-                self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,args.gcn_layers,args.dropout,args.relu))
+                if _==0:
+                    k=3
+                else:
+                    k=1
+
+                self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,k,args.dropout,args.relu))
                 x_size=self.agcns[-1].pass_dim
                 if args.model=='diffpool':
                     args.diffpool_k=int(math.ceil(args.diffpool_k*args.percent))

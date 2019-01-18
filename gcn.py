@@ -119,28 +119,21 @@ class AGCNBlock(nn.Module):
                 for _ in range(self.khop):
                     denom=torch.matmul(adj,denom)
                 denom=denom.squeeze()+self.eps
-                att_b=att_b/denom
+                att_b=(att_b*torch.diagonal(adj,0,1,2))/denom
                 if self.dnorm:
-                    if self.softmax=='diag':
-                        diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)/self.dnorm_coe
-                        att_b=att_b*diag_scale
-                    elif self.softmax=='none':
+                    if self.adj_norm=='diag':
+                        diag_scale=mask/(torch.diagonal(adj,0,1,2)+self.eps)
+                    elif self.adj_norm=='none':
                         diag_scale=adj.sum(dim=1)
-                        att_b=att_b*diag_scale
+                    att_b=att_b*diag_scale
+                att_b=att_b*mask
                         
-                
             if self.softmax=='global':
                 att=att_a
             elif self.softmax=='neibor' or self.softmax=='hardnei':
                 att=att_b
             elif self.softmax=='mix':
                 att=att_a*torch.abs(self.lamda1)+att_b*torch.abs(self.lamda2)
-            elif self.softmax=='gcn':
-                att=torch.stack([att_a,att_b],dim=2)
-                if self.att_norm:
-                    att=torch.nn.functional.normalize(att,dim=1)
-                att=self.att_gcn(att,adj)
-                att=torch.nn.functional.softmax(att.squeeze(2),dim=1)
                 
         Z=hidden
 
@@ -210,8 +203,12 @@ class AGCNBlock(nn.Module):
             new_adj=torch.matmul(torch.matmul(assign_m_t,adj),assign_m)
             H=torch.matmul(assign_m_t,Z)
             
-        if self.att_out:
-            out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
+        if self.att_out and self.model=='agcn':
+            if self.softmax=='global':
+                out=self.pool(att_a_1.unsqueeze(2)*hidden,mask)
+            elif self.softmax=='neibor':
+                att_b_sum=att_b.sum(dim=1,keepdim=True)
+                out=self.pool((att_b/(att_b_sum+self.eps)).unsqueeze(2)*hidden,mask)
         else:
             out=self.pool(hidden,mask)
             
