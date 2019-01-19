@@ -1,0 +1,64 @@
+  PID TTY      STAT   TIME COMMAND
+    1 pts/0    Ss+    0:00 /bin/bash
+  148 ?        Ss     0:00 /usr/sbin/sshd
+ 5342 ?        RNl  4229:09 agcn_softmax^global_adj_norm^none_relu^lrelu_fold^5_REDDIT-BINARY
+ 5408 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+10261 ?        SN     0:00 /bin/bash ./att_x_lrelu_ddrb.sh 1 2
+10376 ?        SN     0:00 /bin/bash ./att_x_lrelu_ddrb.sh 3 4
+10876 ?        SN     0:00 /bin/bash ./att_x_lrelu_reddit.sh
+10879 ?        RNl  2849:46 agcn_softmax^global_adj_norm^diag_gcn_layers^8_num_layers^4_relu^lrelu_att_out^1_pool^sum_REDDIT-MULTI-12K
+10951 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+14804 ?        RNl  1814:19 diffpool_diffpool_k^860_gcn_layers^8_num_layers^4_single_loss^1_adj_norm^none_REDDIT-MULTI-12K
+14870 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+16296 ?        RNl  1431:43 agcn_fold^9_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_att_out^1_pool^sum_DD
+16370 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+16730 ?        Ss     0:01 sshd: huangjj@pts/2
+16739 pts/2    Ss     0:00 -bash
+17166 ?        RNl  1183:07 unet_gcn_layers^8_num_layers^4_single_loss^1_softmax^global_adj_norm^none_fold^3_REDDIT-BINARY
+17232 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+17322 ?        RNl  1152:01 agcn_softmax^global_adj_norm^none_relu^lrelu_fold^3_REDDIT-BINARY
+17388 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+17527 ?        RNl  878:25 agcn_fold^4_softmax^global_adj_norm^diag_gcn_layers^8_num_layers^4_relu^lrelu_att_out^1_pool^sum_REDDIT-BINARY
+17593 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+17882 ?        RNl  827:09 agcn_fold^2_softmax^global_adj_norm^diag_gcn_layers^8_num_layers^4_relu^lrelu_att_out^1_pool^sum_REDDIT-BINARY
+17948 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+18348 pts/2    RNl  805:22 agcn_fold^1_softmax^neibor_adj_norm^diag_dnorm^1_relu^lrelu_att_out^1_pool^sum_COLLAB
+18420 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+18426 pts/2    RNl  806:03 agcn_fold^3_softmax^neibor_adj_norm^diag_dnorm^1_relu^lrelu_att_out^1_pool^sum_COLLAB
+18498 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+18582 pts/2    RNl  805:17 agcn_fold^7_softmax^neibor_adj_norm^diag_dnorm^1_relu^lrelu_att_out^1_pool^sum_COLLAB
+18654 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+18860 pts/2    Rl   802:58 agcn_softmax^neibor_adj_norm^diag_dnorm^1_num_layers^4_gcn_layers^8_relu^lrelu_att_out^1_pool^sum_REDDIT-MULTI-12K
+18926 pts/2    S      0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+19173 pts/2    RNl  520:40 agcn_fold^5_softmax^neibor_adj_norm^diag_dnorm^1_num_layers^4_gcn_layers^8_relu^lrelu_att_out^1_pool^sum_REDDIT-BINARY
+19239 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+19561 pts/2    SN     0:00 /bin/bash ./neibor_avgpool_lrelu.sh 1 2
+19562 pts/2    SN     0:00 /bin/bash ./neibor_avgpool_lrelu.sh 3 4
+19563 pts/2    SN     0:00 /bin/bash ./neibor_avgpool_lrelu.sh 5 6
+19809 pts/2    SN     0:00 /bin/bash ./neibor_avgpool_lrelu.sh 7 8
+19810 pts/2    SN     0:00 /bin/bash ./neibor_avgpool_lrelu.sh 9 10
+20031 pts/2    Rl   423:09 agcn_softmax^neibor_adj_norm^diag_dnorm^1_num_layers^4_gcn_layers^8_relu^lrelu_REDDIT-MULTI-12K
+20097 pts/2    S      0:00 /usr/bin/python3 -c from multiprocessing.semaphore_tracker import main;main(3)
+20100 pts/2    S      0:00 zsh
+20169 pts/2    RNl  327:37 agcn_fold^9_softmax^neibor_adj_norm^diag_dnorm^1_num_layers^4_gcn_layers^8_relu^lrelu_att_out^1_pool^sum_REDDIT-BINARY
+20235 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+20247 pts/2    RNl  166:30 agcn_fold^7_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_DD
+20313 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+20325 pts/2    RNl  165:37 agcn_fold^9_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_DD
+20391 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+20403 pts/2    RNl  103:30 agcn_fold^3_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_DD
+20469 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+20481 pts/2    RNl  102:57 agcn_fold^5_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_DD
+20547 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+20559 pts/2    RNl  102:46 agcn_fold^1_softmax^neibor_adj_norm^none_dnorm^1_relu^lrelu_DD
+20625 pts/2    SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+21258 ?        RNl   51:04 unet_gcn_layers^8_num_layers^4_softmax^global_adj_norm^none_fold^8_REDDIT-BINARY
+21324 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+21623 pts/2    R+     0:00 ps -ax
+81170 ?        RNl  8677:50 agcn_softmax^global_adj_norm^none_dnorm^1_num_layers^4_gcn_layers^8_REDDIT-MULTI-12K
+81244 ?        SN     0:00 /usr/bin/python3 -B -c from multiprocessing.semaphore_tracker import main;main(3)
+89601 ?        SN     0:00 /bin/bash ./leaky_relu_global.sh 1 3
+89602 ?        SN     0:00 /bin/bash ./leaky_relu_global.sh 4 6
+91141 ?        SN     0:00 /bin/bash ./unet_diffpool_redditb.sh 1 5
+91142 ?        SN     0:00 /bin/bash ./unet_diffpool_redditb.sh 6 10
+91822 ?        SN     0:00 /bin/bash ./unet_diffpool_reddit_single_loss.sh
