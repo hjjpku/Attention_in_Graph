@@ -223,6 +223,7 @@ class AGCNBlock(nn.Module):
 
 
         visualize_tools=[]
+        '''
         if (not self.training) and is_print1:
 
             print('**********************************')
@@ -255,6 +256,7 @@ class AGCNBlock(nn.Module):
             print('**********************************')
             print('new_mask:',new_mask.type(),new_mask.shape)
             print(new_mask)
+        '''
 
         if (not self.training) and is_print2:
             if self.model!='diffpool':
