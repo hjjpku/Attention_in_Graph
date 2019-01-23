@@ -1,7 +1,0 @@
-tune labmda in w_a w_b sum
-masked batch norm
-consider st*X
-
-dd dropout
-
-dd 5-10 layer relu

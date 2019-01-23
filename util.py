@@ -80,11 +80,6 @@ agcn_opt.add_argument('-lamda', type=float,default=1.,help='agcn node keep perce
 agcn_opt.add_argument('-agcn_res', type=int,default=0,help='agcn node keep percent(=k/node_num)')
 agcn_opt.add_argument('-pool_layers', type=int,default=3,help='agcn node keep percent(=k/node_num)')
 
-esm_opt=cmd_opt.add_argument_group('ensembler options')
-esm_opt.add_argument('-esm_hidden', type=int, default=128, help='hidden size of mlp layers')
-esm_opt.add_argument('-esm_lr', type=float, default=1e-4, help='init learning_rate')
-esm_opt.add_argument('-esm_drop', type=float, default=0.5, help='')
-esm_opt.add_argument('-esm_indrop', type=int, default=1, help='')
 
 cmd_args = cmd_opt.parse_args()
 
@@ -92,7 +87,7 @@ cmd_args = cmd_opt.parse_args()
 #if len(cmd_args.latent_dim) == 1:
 #    cmd_args.latent_dim = cmd_args.latent_dim[0]
 
-class Hjj_Graph(object):
+class Hyper_Graph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
         '''
             g: a networkx graph
@@ -213,7 +208,7 @@ def load_data():
 
             #assert len(g.edges()) * 2 == n_edges  (some graphs in COLLAB have self-loops, ignored here)
             assert len(g) == n
-            g_list.append(Hjj_Graph(g, l, node_tags, node_features))
+            g_list.append(Hyper_Graph(g, l, node_tags, node_features))
    
     for g in g_list:
         g.label = label_dict[g.label]

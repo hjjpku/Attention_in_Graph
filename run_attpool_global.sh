@@ -1,8 +1,8 @@
 #! /bin/bash
 for i in $(seq 1 10)
 do
-	python3 main.py -fold=$i -model=agcn -softmax=global -adj_norm=none -att_out=1 -pool=sum -num_layers=3 -gcn_layers=6 -logdir=log/attpool_g_nci1 -data=NCI1 
-	python3 main.py -fold=$i -model=agcn -softmax=global -adj_norm=none -att_out=1 -pool=sum -num_layers=3 -gcn_layers=6 -logdir=log/attpool_g_proteins -data=PROTEINS
+	python3 main.py -fold=$i -model=agcn -softmax=global -adj_norm=none -att_out=1 -pool=sum -relu=lrelu -num_layers=3 -gcn_layers=6 -logdir=log/attpool_g_nci1 -data=NCI1 
+	python3 main.py -fold=$i -model=agcn -softmax=global -adj_norm=none -att_out=1 -pool=sum -relu=lrelu -num_layers=3 -gcn_layers=6 -logdir=log/attpool_g_proteins -data=PROTEINS
 done
 
 python3 sort.py -f log/attpool_g_nci1/acc_results.txt -sort=1 -fold=10

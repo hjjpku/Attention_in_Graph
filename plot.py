@@ -40,6 +40,6 @@ for x in files:
 for x in sorted(train_acc.keys()):
     assert train_cnt[x]==args.fold and test_cnt[x]==args.fold
     if not args.test:
-        print(train_acc[x]/args.fold)
+        print(train_acc[x]/train_cnt[x])
     else:
-        print(test_acc[x]/args.fold)
+        print(test_acc[x]/test_cnt[x])

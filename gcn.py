@@ -314,7 +314,6 @@ class GCNBlock(nn.Module):
             y = y + self.bias
         if self.normalize_embedding:
             y = F.normalize(y, p=2, dim=2)
-        y = mask.unsqueeze(2)*y
         if self.bn:
             y=self.bn_layer(y,mask)
         if self.relu=='relu':
@@ -323,6 +322,7 @@ class GCNBlock(nn.Module):
             y=torch.nn.functional.leaky_relu(y,0.1)
         return y
 
+#experimental function, untested
 class masked_batchnorm(nn.Module):
     def __init__(self,feat_dim,epsilon=1e-10):
         super().__init__()
