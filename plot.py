@@ -8,7 +8,6 @@ parser.add_argument('-avg',default=1,type=int)
 parser.add_argument('-test',default=1,type=int)
 args=parser.parse_args()
 
-
 files=[os.path.join(args.f,x) for x in os.listdir(args.f)]
 test_acc={}
 train_acc={}
@@ -37,9 +36,13 @@ for x in files:
             train_cnt[epoch]+=1
             train_acc[epoch]+=acc
 
+max_acc=0
 for x in sorted(train_acc.keys()):
     assert train_cnt[x]==args.fold and test_cnt[x]==args.fold
     if not args.test:
-        print(train_acc[x]/args.fold)
+        acc=train_acc[x]/args.fold
+        print(acc)
     else:
-        print(test_acc[x]/args.fold)
+        acc=test_acc[x]/args.fold
+        print(acc)
+print('max: %.4f'%max(max_acc,acc))
