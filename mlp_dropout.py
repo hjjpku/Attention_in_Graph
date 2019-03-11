@@ -68,9 +68,9 @@ class MLPClassifier(nn.Module):
             x=self.dropout_layer(x)
         if self.num_layers==2:
             h1 = self.h1_weights(x)
-            h1 = F.relu(h1)
             if self.dropout>0.001:
                 h1=self.dropout_layer(h1)
+            h1 = F.relu(h1)
 
             logits = self.h2_weights(h1)
         elif self.num_layers==1:

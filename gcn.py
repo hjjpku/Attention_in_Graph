@@ -304,8 +304,6 @@ class GCNBlock(nn.Module):
             self.bias = None
 
     def forward(self, x, adj, mask):
-        if self.dropout > 0.001:
-            x = self.dropout_layer(x)
         y = torch.matmul(adj, x)
         if self.add_self:
             y += x
@@ -316,6 +314,8 @@ class GCNBlock(nn.Module):
             y = F.normalize(y, p=2, dim=2)
         if self.bn:
             y=self.bn_layer(y,mask)
+        if self.dropout > 0.001:
+            x = self.dropout_layer(x)
         if self.relu=='relu':
             y=torch.nn.functional.relu(y)
         elif self.relu=='lrelu':
