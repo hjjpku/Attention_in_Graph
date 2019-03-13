@@ -291,7 +291,7 @@ class GCNBlock(nn.Module):
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
         if self.bn:
-            self.bn_layer = masked_batchnorm(output_dim)
+            self.bn_layer = torch.nn.BatchNorm1d(output_dim)
 
         self.normalize_embedding = normalize_embedding
         self.input_dim = input_dim
@@ -313,7 +313,22 @@ class GCNBlock(nn.Module):
         if self.normalize_embedding:
             y = F.normalize(y, p=2, dim=2)
         if self.bn:
-            y=self.bn_layer(y,mask)
+            tot=mask.sum()
+            bn_tensor_bf=mask.new_zeros(tot,x.shape[2])
+            bn_tensor_af=mask.new_zeros(*x.shape)
+            index=mask.sum(dim=1).tolist()
+            start_index=[]
+            sum=0
+            for i in range(x.shape[0]):
+                start_index.append(sum)
+                sum+=index[i]
+            start_index.append(sum)
+            for i in range(x.shape[0]):
+                bn_tensor_bf[start_index[i]:start_index[i+1]]=x[i,0:index[i]]
+            bn_tensor_bf=self.bn_layer(bn_tensor_bf)
+            for i in range(x.shape[0]):
+                bn_tensor_af[i,0:index[i]]=bn_tensor_bf[start_index[i]:start_index[i+1]]
+            x=bn_tensor_af
         if self.dropout > 0.001:
             x = self.dropout_layer(x)
         if self.relu=='relu':
