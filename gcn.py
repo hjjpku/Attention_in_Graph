@@ -313,24 +313,23 @@ class GCNBlock(nn.Module):
         if self.normalize_embedding:
             y = F.normalize(y, p=2, dim=2)
         if self.bn:
-            tot=mask.sum()
-            bn_tensor_bf=mask.new_zeros(tot,x.shape[2])
-            bn_tensor_af=mask.new_zeros(*x.shape)
-            index=mask.sum(dim=1).tolist()
+            index=mask.sum(dim=1).long().tolist()
+            bn_tensor_bf=mask.new_zeros((sum(index),y.shape[2]))
+            bn_tensor_af=mask.new_zeros(*y.shape)
             start_index=[]
-            sum=0
+            ssum=0
             for i in range(x.shape[0]):
-                start_index.append(sum)
-                sum+=index[i]
-            start_index.append(sum)
+                start_index.append(ssum)
+                ssum+=index[i]
+            start_index.append(ssum)
             for i in range(x.shape[0]):
-                bn_tensor_bf[start_index[i]:start_index[i+1]]=x[i,0:index[i]]
+                bn_tensor_bf[start_index[i]:start_index[i+1]]=y[i,0:index[i]]
             bn_tensor_bf=self.bn_layer(bn_tensor_bf)
             for i in range(x.shape[0]):
                 bn_tensor_af[i,0:index[i]]=bn_tensor_bf[start_index[i]:start_index[i+1]]
-            x=bn_tensor_af
+            y=bn_tensor_af
         if self.dropout > 0.001:
-            x = self.dropout_layer(x)
+            y = self.dropout_layer(y)
         if self.relu=='relu':
             y=torch.nn.functional.relu(y)
         elif self.relu=='lrelu':
