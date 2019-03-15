@@ -80,15 +80,17 @@ class Classifier(nn.Module):
             self.agcn_res=args.agcn_res
             self.single_loss=args.single_loss
             self.num_layers=args.num_layers
-            assert args.gcn_layers%self.num_layers==0
-            args.gcn_layers=args.gcn_layers//self.num_layers
-
+            if args.arch==1:
+                assert args.gcn_layers%self.num_layers==0
+                gcn_layer_list=[args.gcn_layers//self.num_layers]*self.num_layers
+            elif args.arch==2:
+                gcn_layer_list=[args.gcn_layers]+[1]*(self.num_layers-1)
 
             self.agcns=nn.ModuleList()
             x_size=args.input_dim
 
-            for _ in range(args.num_layers):
-                self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,args.gcn_layers,args.dropout,args.relu))
+            for i in range(args.num_layers):
+                self.agcns.append(AGCNBlock(args,x_size,args.hidden_dim,gcn_layer_list[i],args.dropout,args.relu))
                 x_size=self.agcns[-1].pass_dim
                 if args.model=='diffpool':
                     args.diffpool_k=int(math.ceil(args.diffpool_k*args.percent))
@@ -190,11 +192,19 @@ class Classifier(nn.Module):
 
     def gcn_forward(self,node_feat,labels,adj,mask):
         X=node_feat
+        vis=[]
         for i in range(self.num_layers):
             X=self.gcns[i](X,adj,mask)
+            if args.save_feat and not self.training:
+                vis.append(X.cpu())
         embed=self.pool(X,mask)
+        if args.save_feat and not self.training:
+            vis.append(mask.cpu())
+            vis.append(embed.cpu())
+            vis.append(labels.cpu())
+            vis=vis[::-1]
         logits,_,loss,acc=self.mlp(embed,labels)
-        return logits,loss,acc,acc,None
+        return logits,loss,acc,acc,None,vis
         
     def agcn_forward(self,node_feat,labels,adj,mask,is_print=False):
 #        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
@@ -205,6 +215,7 @@ class Classifier(nn.Module):
         p_t=[]
         pred_logits=0
         visualize_tools=[]
+        visualize_tools1=[labels.cpu()]
         embeds=0
 
         for i in range(self.num_layers):
@@ -212,6 +223,8 @@ class Classifier(nn.Module):
             embeds=embeds+embed
 
             visualize_tools.append(visualize_tool)
+            if args.save_feat and not self.training:
+                visualize_tools1.append([embed.cpu(),X.cpu(),mask.cpu()])
 
             if not self.agcn_res:
                 logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
@@ -243,6 +256,7 @@ class Classifier(nn.Module):
                 print('test sample loss')
             print('cls_loss:',cls_loss)
             print('rank_loss:',rank_loss)
+
         
         if self.single_loss:
             cls_loss=cls_loss[-1]
@@ -251,7 +265,7 @@ class Classifier(nn.Module):
             loss=cls_loss.mean()+rank_loss.mean()
         else:
             loss=cls_loss.mean()
-        return logits,loss,acc,avg_acc,visualize_tools
+        return logits,loss,acc,avg_acc,visualize_tools,visualize_tools1 
 
 def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=50):
 
@@ -265,6 +279,8 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
     
     visual_pos=[int(x) for x in args.sample.strip().split(',')]
     
+    vis1=[]
+
     for pos in pbar:
         selected_idx = sample_idxes[pos * bsize : (pos + 1) * bsize]
         batch_graph = [g_list[idx] for idx in selected_idx]
@@ -274,7 +290,8 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         if (not classifier.training) and (pos in visual_pos) and args.model!='gcn':
             print('=======================test minibatch:',pos,'==================================')
 
-        logits, loss, acc,avg_acc,visualize_tools = classifier(batch_graph,is_print=(pos in visual_pos))
+        logits, loss, acc,avg_acc,visualize_tools,visualize_tools1 = classifier(batch_graph,is_print=(pos in visual_pos))
+        vis1.append(visualize_tools1)
         all_scores.append(logits[:, 1].detach())  # for binary classification
 
         if epoch%args.save_freq==0 and (not classifier.training) and args.save and (pos in visual_pos) and args.model!='gcn':
@@ -308,7 +325,7 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
     auc = metrics.auc(fpr, tpr)
     avg_loss = np.concatenate((avg_loss, [auc]))
     
-    return avg_loss
+    return avg_loss,vis1
 
 def main():
 
@@ -365,7 +382,7 @@ def main():
         start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
-        avg_loss = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
+        avg_loss,vis = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
         if not args.printAUC:
             avg_loss[3] = 0.0
         print('=====>average training of epoch %d: loss %.5f acc %.5f avg_acc %.5f auc %.5f' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2],avg_loss[3]))
@@ -373,7 +390,7 @@ def main():
 
         classifier.eval()
 
-        test_loss = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
+        test_loss,vis = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
         if best_acc<test_loss[1]:
             best_acc=test_loss[1]
             best_epoch=epoch
@@ -391,6 +408,7 @@ def main():
                 'epoch':epoch,
                 'best_overall_acc':best_overall_acc},
                 os.path.join(save_path,'best_model.pth'))
+            torch.save(vis,os.path.join(save_path,'best_feature.pth'))
 
         if not args.printAUC:
             test_loss[3] = 0.0
