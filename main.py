@@ -95,8 +95,11 @@ class Classifier(nn.Module):
                 if args.model=='diffpool':
                     args.diffpool_k=int(math.ceil(args.diffpool_k*args.percent))
             self.mlps=nn.ModuleList()
-            for _ in range(args.num_layers):
-                self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
+            if not args.concat:
+                for i in range(args.num_layers):
+                    self.mlps.append(MLPClassifier(input_size=args.hidden_dim, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout))
+            else:
+                self.mlps=MLPClassifier(input_size=args.hidden_dim*self.num_layers, hidden_size=args.mlp_hidden, num_class=args.num_class,num_layers=args.mlp_layers,dropout=args.dropout)
         
     def PrepareFeatureLabel(self, batch_graph):
         batch_size = len(batch_graph)
@@ -217,35 +220,34 @@ class Classifier(nn.Module):
         visualize_tools=[]
         visualize_tools1=[labels.cpu()]
         embeds=0
+        concats=[]
 
         for i in range(self.num_layers):
             embed,X,adj,mask,visualize_tool=self.agcns[i](X,adj,mask,is_print=is_print)
             embeds=embeds+embed
+            concats.append(embed)
 
             visualize_tools.append(visualize_tool)
             if args.save_feat and not self.training:
                 visualize_tools1.append([embed.cpu(),X.cpu(),mask.cpu()])
+
+            if args.concat:
+                continue
 
             if not self.agcn_res:
                 logits,softmax_logits,loss,acc=self.mlps[i](embed,labels)
             else:
                 logits,softmax_logits,loss,acc=self.mlps[i](embeds,labels)
 
-            '''
-            cls_loss=loss
-            '''
             pred_logits=pred_logits+softmax_logits
             cls_loss[i]=loss
 
-            if self.rank_loss:
-                p_mask=softmax_logits.new_zeros(softmax_logits.shape,dtype=torch.uint8)
-                for j,cls in enumerate(labels):
-                    p_mask[j][cls]=1
-                p_t.append(torch.masked_select(softmax_logits,p_mask))
-                if i>0:
-                    tmp=p_t[i-1]-p_t[i]+self.margin
-                    rank_loss[i-1]=torch.max(tmp,torch.zeros_like(tmp)).mean()
-
+        if args.concat:
+            logits,softmax_logits,loss,acc=self.mlps(torch.cat(concats,dim=1),labels)
+            pred_logits=softmax_logits
+            pred=pred_logits.data.max(1)[1]
+            return logits,loss,acc,acc,visualize_tools,visualize_tools1
+        
         pred=pred_logits.data.max(1)[1]
         avg_acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
 

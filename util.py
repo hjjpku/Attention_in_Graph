@@ -43,6 +43,7 @@ cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to pri
 #classifier options:
 cls_opt=cmd_opt.add_argument_group('classifier options')
 cls_opt.add_argument('-model', type=str, default='agcn', help='model choice:gcn/agcn')
+cls_opt.add_argument('-concat', type=int, default=0, help='model choice:gcn/agcn')
 cls_opt.add_argument('-hidden_dim', type=int, default=64, help='hidden size k')
 cls_opt.add_argument('-num_class', type=int, default=1000, help='classification number')
 cls_opt.add_argument('-arch', type=int, default=1, help='layer number of agcn block')
