@@ -207,7 +207,7 @@ class Classifier(nn.Module):
             vis.append(labels.cpu())
             vis=vis[::-1]
         logits,_,loss,acc=self.mlp(embed,labels)
-        return logits,loss,acc,acc,None,vis
+        return logits,loss,acc,acc,None,None,vis
         
     def agcn_forward(self,node_feat,labels,adj,mask,is_print=False):
 #        node_feat, labels = self.PrepareFeatureLabel(batch_graph)
@@ -221,6 +221,8 @@ class Classifier(nn.Module):
         visualize_tools1=[labels.cpu()]
         embeds=0
         concats=[]
+        
+        layer_acc=[]
 
         for i in range(self.num_layers):
             embed,X,adj,mask,visualize_tool=self.agcns[i](X,adj,mask,is_print=is_print)
@@ -239,6 +241,7 @@ class Classifier(nn.Module):
             else:
                 logits,softmax_logits,loss,acc=self.mlps[i](embeds,labels)
 
+            layer_acc.append(acc)
             pred_logits=pred_logits+softmax_logits
             cls_loss[i]=loss
 
@@ -246,7 +249,7 @@ class Classifier(nn.Module):
             logits,softmax_logits,loss,acc=self.mlps(torch.cat(concats,dim=1),labels)
             pred_logits=softmax_logits
             pred=pred_logits.data.max(1)[1]
-            return logits,loss,acc,acc,visualize_tools,visualize_tools1
+            return logits,loss,acc,acc,None,visualize_tools,visualize_tools1
         
         pred=pred_logits.data.max(1)[1]
         avg_acc = pred.eq(labels.data.view_as(pred)).cpu().sum().item() / float(labels.size()[0])
@@ -267,11 +270,12 @@ class Classifier(nn.Module):
             loss=cls_loss.mean()+rank_loss.mean()
         else:
             loss=cls_loss.mean()
-        return logits,loss,acc,avg_acc,visualize_tools,visualize_tools1 
+        return logits,loss,acc,avg_acc,layer_acc,visualize_tools,visualize_tools1 
 
 def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=50):
 
     total_loss = []
+    total_layer_acc = []
     total_iters = (len(sample_idxes) + (bsize - 1) * (optimizer is None)) // bsize
     pbar = range(total_iters)
 #    pbar = tqdm(range(total_iters), unit='batch')
@@ -292,7 +296,7 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
         if (not classifier.training) and (pos in visual_pos) and args.model!='gcn':
             print('=======================test minibatch:',pos,'==================================')
 
-        logits, loss, acc,avg_acc,visualize_tools,visualize_tools1 = classifier(batch_graph,is_print=(pos in visual_pos))
+        logits, loss, acc,avg_acc,layer_acc,visualize_tools,visualize_tools1 = classifier(batch_graph,is_print=(pos in visual_pos))
         vis1.append(visualize_tools1)
         all_scores.append(logits[:, 1].detach())  # for binary classification
 
@@ -313,12 +317,17 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
 #        pbar.set_description('loss: %0.5f acc: %0.5f' % (loss, acc) )
 
         total_loss.append( np.array([loss, acc,avg_acc]) * len(selected_idx))
+        if not args.concat and args.model!='gcn':
+            total_layer_acc.append( np.array(layer_acc) * len(selected_idx))
 
         n_samples += len(selected_idx)
     if optimizer is None:
         assert n_samples == len(sample_idxes)
     total_loss = np.array(total_loss)
     avg_loss = np.sum(total_loss, 0) / n_samples
+    if not args.concat and args.model!='gcn':
+        total_layer_acc= np.array(total_layer_acc)
+        avg_layer_acc = np.sum(total_layer_acc, 0) / n_samples
     all_scores = torch.cat(all_scores).cpu().data.numpy()
     # np.savetxt('test_scores.txt', all_scores)  # output test predictions
     
@@ -327,7 +336,10 @@ def loop_dataset(g_list, classifier, sample_idxes, epoch,optimizer=None, bsize=5
     auc = metrics.auc(fpr, tpr)
     avg_loss = np.concatenate((avg_loss, [auc]))
     
-    return avg_loss,vis1
+    if not args.concat and args.model!='gcn':
+        return avg_loss,avg_layer_acc,vis1
+    else:
+        return avg_loss,[-1]*args.num_layers,vis1
 
 def main():
 
@@ -384,7 +396,7 @@ def main():
         start_time=time.time()
         random.shuffle(train_idxes)
         classifier.train()
-        avg_loss,vis = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
+        avg_loss,avg_layer_acc,vis = loop_dataset(train_graphs, classifier, train_idxes, epoch,optimizer=optimizer,bsize=args.bsize)
         if not args.printAUC:
             avg_loss[3] = 0.0
         print('=====>average training of epoch %d: loss %.5f acc %.5f avg_acc %.5f auc %.5f' % (epoch, avg_loss[0], avg_loss[1], avg_loss[2],avg_loss[3]))
@@ -392,7 +404,7 @@ def main():
 
         classifier.eval()
 
-        test_loss,vis = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
+        test_loss,test_layer_acc,vis = loop_dataset(test_graphs, classifier, list(range(len(test_graphs))),epoch,bsize=args.test_bsize)
         if best_acc<test_loss[1]:
             best_acc=test_loss[1]
             best_epoch=epoch
@@ -414,15 +426,15 @@ def main():
 
         if not args.printAUC:
             test_loss[3] = 0.0
-        print('=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d) time:%.0fs' % (epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch,time.time()-start_time))
+
+        s='=====>average test of epoch %d: loss %.5f acc %.5f avg_acc %.5f best acc %.5f(%d) %.5f(%d) time:%.0fs'%(epoch, test_loss[0], test_loss[1],test_loss[2], best_acc,best_epoch,best_avg_acc,best_avg_epoch,time.time()-start_time)
+        for k in range(args.num_layers):
+            s+=' layer%d %.4f'%(k,test_layer_acc[k])
+        print(s)
         if args.model=='agcn' and args.tau>0:
             for k in range(classifier.num_layers):
                 print('layer%d: tau=%.5f, lamda1=%.5f lamda2=%.5f'%(k,classifier.agcns[k].tau.item(),classifier.agcns[k].lamda1.item(),classifier.agcns[k].lamda2.item()))
 
-
-    if args.printAUC:
-        with open('auc_results.txt', 'a+') as f:
-            f.write(str(test_loss[-1]) + '\n')
 
     with open(os.path.join(args.logdir,'acc_results.txt'), 'a+') as f:
         f.writelines(pname+': '+'%.4f(%d) %.4f(%d)'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))

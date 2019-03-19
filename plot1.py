@@ -14,10 +14,21 @@ test_acc={}
 train_acc={}
 train_cnt={}
 test_cnt={}
+layer_acc=[{}]*100
 train_record=[[]]*1000
 test_record=[[]]*1000
+max_layer=-1
+
 for x in files:
     f=open(x,'r')
+    
+    for l in f.readlines():
+        if ('of epoch' in l) and ('layer0' in l):
+            for k in range(100):
+                if ('layer%d'%k) in l:
+                    max_layer=max(max_layer,k)
+            break
+
     for l in f.readlines():
         if 'of epoch' not in l:
             continue
@@ -28,6 +39,8 @@ for x in files:
             test_acc[epoch]=0
             train_cnt[epoch]=0
             test_cnt[epoch]=0
+            for k in range(max_layer):
+                layer_acc[k][epoch]=0
         if args.avg:
             acc=float(words[words.index('avg_acc')+1])
         else:
@@ -36,6 +49,9 @@ for x in files:
             test_cnt[epoch]+=1
             test_acc[epoch]+=acc
             test_record[epoch].append(acc)
+            for k in range(max_layer):
+                acc_k=float(words[words.index('layer%d'%k)+1])
+                layer_acc[k][epoch]+=acc_k
         else:
             train_cnt[epoch]+=1
             train_acc[epoch]+=acc
@@ -59,7 +75,9 @@ for i,x in enumerate(sorted(train_acc.keys())):
         if test_cnt[x]<=args.fold:
             continue
         acc=test_acc[x]/test_cnt[x]
-        print('%d\t%.4f\t%.6f'%(i,acc,var(test_record[i],acc)))
+        s='%d\t%.4f\t%.4f'%(i,acc,var(test_record[i],acc))
+        for k in range(max_layer):
+            s+='\t%.4f'%(layer_acc[k][x]/test_cnt[x])
     if max_acc<acc:
         max_acc=acc
         max_epoch=i
