@@ -437,7 +437,7 @@ def main():
 
 
     with open(os.path.join(args.logdir,'acc_results.txt'), 'a+') as f:
-        f.writelines(pname+': '+'%.4f(%d) %.4f(%d)'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))
+        f.writelines(pname+': '+'%.4f(%d) %.4f(%d)\n'%(best_acc,best_epoch,best_avg_acc,best_avg_epoch))
         
 
 if __name__ == '__main__':
