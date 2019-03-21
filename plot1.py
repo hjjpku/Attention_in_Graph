@@ -14,10 +14,15 @@ test_acc={}
 train_acc={}
 train_cnt={}
 test_cnt={}
-layer_acc=[{}]*100
-train_record=[[]]*1000
-test_record=[[]]*1000
+layer_acc=[{},{},{},{}]
+
+train_record=[]
+test_record=[]
+for i in range(1000):
+    train_record.append([])
+    test_record.append([])
 max_layer=-1
+flag=0
 
 for x in files:
     f=open(x,'r')
@@ -26,9 +31,13 @@ for x in files:
         if ('of epoch' in l) and ('layer0' in l):
             for k in range(100):
                 if ('layer%d'%k) in l:
-                    max_layer=max(max_layer,k)
+                    max_layer=max(max_layer,k+1)
             break
+    f.close()
+    
+    
 
+    f=open(x,'r')
     for l in f.readlines():
         if 'of epoch' not in l:
             continue
@@ -41,6 +50,8 @@ for x in files:
             test_cnt[epoch]=0
             for k in range(max_layer):
                 layer_acc[k][epoch]=0
+            if epoch==2 and flag==0:
+                print(layer_acc)
         if args.avg:
             acc=float(words[words.index('avg_acc')+1])
         else:
@@ -52,16 +63,22 @@ for x in files:
             for k in range(max_layer):
                 acc_k=float(words[words.index('layer%d'%k)+1])
                 layer_acc[k][epoch]+=acc_k
+            if epoch==2 and flag==0:
+                print(layer_acc)
         else:
             train_cnt[epoch]+=1
             train_acc[epoch]+=acc
             train_record[epoch].append(acc)
+    flag=1
+
 
 def var(l,avg):
     sqsum=0
     for x in l:
         sqsum+=(x-avg)**2
     return math.sqrt(sqsum/len(l)) 
+
+print(test_record)
 
 max_acc=0
 max_epoch=-1
@@ -75,12 +92,13 @@ for i,x in enumerate(sorted(train_acc.keys())):
         if test_cnt[x]<=args.fold:
             continue
         acc=test_acc[x]/test_cnt[x]
-        s='%d\t%.4f\t%.4f'%(i,acc,var(test_record[i],acc))
+        s='%d\t%.4f\t%.4f'%(i+1,acc,var(test_record[i+1],acc))
         for k in range(max_layer):
             s+='\t%.4f'%(layer_acc[k][x]/test_cnt[x])
+        print(s)
     if max_acc<acc:
         max_acc=acc
-        max_epoch=i
+        max_epoch=i+1
     print('max',max_acc)
 
 print('max: %.4f, epoch %d'%(max_acc,max_epoch))
