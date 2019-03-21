@@ -50,8 +50,6 @@ for x in files:
             test_cnt[epoch]=0
             for k in range(max_layer):
                 layer_acc[k][epoch]=0
-            if epoch==2 and flag==0:
-                print(layer_acc)
         if args.avg:
             acc=float(words[words.index('avg_acc')+1])
         else:
@@ -63,8 +61,6 @@ for x in files:
             for k in range(max_layer):
                 acc_k=float(words[words.index('layer%d'%k)+1])
                 layer_acc[k][epoch]+=acc_k
-            if epoch==2 and flag==0:
-                print(layer_acc)
         else:
             train_cnt[epoch]+=1
             train_acc[epoch]+=acc
@@ -78,7 +74,6 @@ def var(l,avg):
         sqsum+=(x-avg)**2
     return math.sqrt(sqsum/len(l)) 
 
-print(test_record)
 
 max_acc=0
 max_epoch=-1
@@ -87,7 +82,7 @@ for i,x in enumerate(sorted(train_acc.keys())):
         if train_cnt[x]<=args.fold:
             continue
         acc=train_acc[x]/train_cnt[x]
-        print('%d\t%.4f\t%.6f'%(i,acc,var(train_record[i],acc)))
+        print('%d\t%.4f\t%.6f'%(i+1,acc,var(train_record[i+1],acc)))
     else:
         if test_cnt[x]<=args.fold:
             continue
