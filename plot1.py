@@ -96,4 +96,4 @@ for i,x in enumerate(sorted(train_acc.keys())):
         max_epoch=i+1
     print('max',max_acc)
 
-print('max: %.4f, epoch %d'%(max_acc,max_epoch))
+print('max acc: %.4f, epoch %d'%(max_acc,max_epoch))
