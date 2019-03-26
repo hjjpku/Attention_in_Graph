@@ -79,12 +79,12 @@ max_acc=0
 max_epoch=-1
 for i,x in enumerate(sorted(train_acc.keys())):
     if not args.test:
-        if train_cnt[x]<=args.fold:
+        if train_cnt[x]<args.fold:
             continue
         acc=train_acc[x]/train_cnt[x]
         print('%d\t%.4f\t%.6f'%(i+1,acc,var(train_record[i+1],acc)))
     else:
-        if test_cnt[x]<=args.fold:
+        if test_cnt[x]<args.fold:
             continue
         acc=test_acc[x]/test_cnt[x]
         s='%d\t%.4f\t%.4f'%(i+1,acc,var(test_record[i+1],acc))
