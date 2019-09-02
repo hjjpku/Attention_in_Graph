@@ -13,7 +13,6 @@ nohup.out
 
 # C extensions
 old
-*.sh
 *.so
 
 # Distribution / packaging
