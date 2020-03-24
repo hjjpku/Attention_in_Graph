@@ -13,6 +13,7 @@ class AGCNBlock(nn.Module):
         super(AGCNBlock,self).__init__()
         if dropout > 0.001:
             self.dropout_layer = nn.Dropout(p=dropout)
+        self.sort = config.sort
         self.model=config.model
         self.gcns=nn.ModuleList()
         self.gcns.append(GCNBlock(input_dim,hidden_dim,config.bn,config.gcn_res,config.gcn_norm,dropout,relu))
@@ -152,8 +153,20 @@ class AGCNBlock(nn.Module):
 
         k_list=[int(math.ceil(self.filt_percent*x)) for x in mask.sum(dim=1).tolist()]
 
-        if self.model!='diffpool':
-            _,top_index=torch.topk(att,k_max,dim=1)
+        if self.model!='diffpool': 
+            if self.sort=='sample':
+                att_samp = att * mask
+                att_samp = (att_samp/att_samp.sum(1)).detach().cpu().numpy()
+                top_index = ()
+                for i in range(att.size(0)):
+                    top_index = (torch.LongTensor(np.random.choice(att_samp.size(1), k_max, att_samp[i])) ,)
+                top_index = torch.stack(top_index,1)
+            elif self.sort=='random_sample':
+                top_index = torch.LongTensor(att.size(0), k_max)*0
+                for i in range(att.size(0)):
+                    top_index[i,0:k_list[i]] = torch.randperm(int(mask[i].sum().item()))[0:k_list[i]] 
+            else: #sort
+                _,top_index=torch.topk(att,k_max,dim=1)
 
         new_mask=X.new_zeros(X.shape[0],k_max)
 

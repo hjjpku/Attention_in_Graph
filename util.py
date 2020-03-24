@@ -36,6 +36,7 @@ cmd_opt.add_argument('-decay', type=int, default=0, help='init learning_rate')
 cmd_opt.add_argument('-patient', type=int, default=50, help='init learning_rate')
 cmd_opt.add_argument('-clip', type=int, default=0, help='init learning_rate')
 cmd_opt.add_argument('-max_grad_norm', type=float, default=2., help='init learning_rate')
+cmd_opt.add_argument('-sort', type=str, default='sort', help='sort/sample/random_sample')
 cmd_opt.add_argument('-dropout', type=float, default=0., help='')
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
 
@@ -249,4 +250,22 @@ def create_process_name():
     name='_'.join(tmp)
     name='_'.join([cmd_args.model,name,cmd_args.data])
     return name
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
