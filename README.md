@@ -12,7 +12,8 @@ Pytorch >=1.0.0, Python >=3.5
 
 * We provide all datasets that have been mentioned in the paper for testing. 
 
-* We provide shell scripts, for training baseline , AttPool-G and AttPool-L models with 10- fold cross validation on datasets, respectively. For example, to train AttPool-G on the NCI1 dataset, please  run `./run_attpool_global_nci1.sh`.
+* We provide shell scripts, for training baseline , AttPool-G and AttPool-L models with 10- fold cross validation on datasets, respectively. For example, to train AttPool-G on the NCI1 dataset, please  run the shell script `./run_attpool_global_nci1.sh`.
+* You can find the shell scripts for different datasets in the direcotry ./script
 
 ## If you find our work useful, please consider citing:
  
